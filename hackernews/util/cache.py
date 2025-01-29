@@ -1,8 +1,11 @@
 import pandas as pd
 import json
 from typing import Callable
+from pathlib import Path
 
 pg_url = "postgresql://sy91dhb:g5t49ao@178.156.142.230:5432/hd64m1ki"
+
+Path("./data/cache").mkdir(parents=True, exist_ok=True)
 
 def frame(ref: str, version: str, getFrame: Callable):
     cache_versions_loc = "./data/cache/versions.json"
