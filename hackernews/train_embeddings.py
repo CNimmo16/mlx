@@ -144,7 +144,7 @@ except:
     print("Loading wiki articles from file...")
 
     def load_articles():
-        ret = pd.read_xml(os.path.join(dirname, 'data/enwik8.xml', xpath='//pages/page/revision/text'))
+        ret = pd.read_xml(os.path.join(dirname, 'data/enwik8.xml'), xpath='//pages/page/revision/text')
 
         return ret[ret['text'].str.match(r'^( )*#redirect', case=False) == False].reset_index()
 
