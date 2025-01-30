@@ -74,9 +74,6 @@ else:
 
 print(f"Got {len(tokens)} unique tokens")
 
-## remove the stopwords
-tokens = tokens[(~tokens["token"].isin(nltk.corpus.stopwords.words("english"))) & (tokens["token"] != "")].dropna().drop("count", axis=1).reset_index(drop=True)
-
 print(f"Got {len(tokens)} tokens after dropping stopwords and empty tokens")
 
 def runPipeline(text: str):
@@ -84,9 +81,14 @@ def runPipeline(text: str):
     for fn in pipeline:
         ret = fn(ret)
     return ret
-vocab = tokens['token'].apply(runPipeline)
+vocab = tokens['token'].dropna().apply(runPipeline)
 
-vocab = vocab.drop_duplicates(keep='first')[:skipgram.MAX_VOCAB_SIZE]
+vocab = vocab.drop_duplicates(keep='first')
+
+## remove the stopwords
+vocab = vocab[(~vocab.isin(nltk.corpus.stopwords.words("english"))) & (vocab != "")].dropna().reset_index(drop=True)
+
+vocab = vocab[:skipgram.MAX_VOCAB_SIZE]
 
 print(f"Got {len(vocab)} tokens after truncating to {skipgram.MAX_VOCAB_SIZE}")
 
