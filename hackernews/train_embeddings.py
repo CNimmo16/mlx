@@ -222,6 +222,8 @@ else:
             LIMIT 1000000
         """)[['title']].rename(columns={'title': 'text'})
 
+        hn_posts.dropna(inplace=True)
+
         chunk_size = 1000
         header = True
         prgs = tqdm.tqdm(np.array_split(hn_posts, math.ceil(len(hn_posts) / chunk_size)),
