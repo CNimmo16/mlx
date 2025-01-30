@@ -287,6 +287,21 @@ for epoch in range(skipgram.EPOCHS):
         optimizer.step()
         total_loss += loss.item()
         wandb.log({'epoch': epoch + 1, 'train-loss': loss.item()})
+
+    #find the n most similar words
+    def most_similar(word, n=5):
+        word_idx = getIdFromToken(word)
+        state_dict = model.state_dict()
+        A =  state_dict['embeddings.weight'][word_idx].unsqueeze(0)
+        word_similarities = []
+        for i in range(len(vocab)):
+            B =  model.embeddings.weight[i].unsqueeze(0)
+            cosine_similarity = F.cosine_similarity(A, B, dim=1)
+            word_similarities.append((getTokenFromId(i), cosine_similarity.item()))
+        word_similarities = sorted(word_similarities, key=lambda x: x[1], reverse=True)
+        return word_similarities[:n]
+    print('Most similar to dog:')
+    print(most_similar('dog'))
     
     if (epoch + 1) % 10 == 0:
         print(f'Epoch {epoch+1}, Loss: {total_loss/len(dataloader):.4f}')
