@@ -16,6 +16,7 @@ import math
 import wandb
 from random import sample
 from models import skipgram
+import tokenization
 import swifter # do not remove - used indirectly by DataFrame.swifter
 
 import importlib
@@ -32,27 +33,6 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 items_table = "hacker_news.items"
 
 # Tokenization
-
-def removePunctuation(token: str) -> str:
-    return token.translate(str.maketrans("", "", string.punctuation))
-
-def trim(token: str) -> str:
-    return token.strip()
-
-def lowercase(token: str) -> str:
-    return token.lower()
-
-def stemIng(token: str) -> str:
-    if (token.endswith("ing")):
-        return token[:-3]
-    return token
-
-pipeline = [
-    lowercase,
-    removePunctuation,
-    stemIng,
-    trim
-]
 
 print("Fetching unique tokens from database...")
 
@@ -76,12 +56,7 @@ print(f"Got {len(tokens)} unique tokens")
 
 print(f"Got {len(tokens)} tokens after dropping stopwords and empty tokens")
 
-def runPipeline(text: str):
-    ret = text
-    for fn in pipeline:
-        ret = fn(ret)
-    return ret
-vocab = tokens['token'].dropna().apply(runPipeline)
+vocab = tokens['token'].dropna().apply(tokenization.run_pipeline)
 
 vocab = vocab.drop_duplicates(keep='first')
 
@@ -114,10 +89,6 @@ vocab.to_csv(os.path.join(dirname, f"data/vocab{'__mini' if skipgram.MINIMODE el
 
 # Generate training data
 
-def tokenize(text):
-    processed_tokens = [runPipeline(token) for token in text.lower().split()]
-    return [token if token in vocab.index else 'unk' for token in processed_tokens]
-
 def create_skipgram_data(tokens, window_size):
     tokens = [token for token in tokens if token != getIdFromToken('unk')]
     targets = []
@@ -135,7 +106,7 @@ def create_skipgram_data(tokens, window_size):
     return targets, contexts
 
 def processText(text: str):
-    tokens = tokenize(text)
+    tokens = tokenization.tokenize(text)
     token_ids = [getIdFromToken(word) for word in tokens]
     return create_skipgram_data(token_ids, skipgram.WINDOW_SIZE)
 
