@@ -24,6 +24,8 @@ importlib.reload(cache)
 import os
 dirname = os.path.dirname(__file__)
 
+nltk.download('stopwords')
+
 torch.manual_seed(42)
 
 MINI=True
