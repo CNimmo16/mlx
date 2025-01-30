@@ -258,15 +258,13 @@ else:
 wandb.init(project='word2vec', name='skipgram-mini' if skipgram.MINIMODE else 'skipgram')
 
 # Dataset and DataLoader
-token_ids = vocab['id'].to_list()
-
-windows = list(more_itertools.windowed(token_ids, 3))
-inputs = [w[1] for w in windows]
-targets = [[w[0], w[2]] for w in windows]
+inputs = [w[0] for w in final_skipgram_data] # all the "targets"
+targets = [w[1] for w in final_skipgram_data] # all the "contexts"
 input_tensor = torch.LongTensor(inputs)
 target_tensor = torch.LongTensor(targets)
+
 dataset = torch.utils.data.TensorDataset(input_tensor, target_tensor)
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=512, shuffle=True)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=10 if skipgram.MINIMODE else 512, shuffle=True)
 
 # Initialize model, loss, and optimizer
 model = skipgram.Model(vocab.size + 1, skipgram.EMBEDDING_DIM)
@@ -278,17 +276,19 @@ optimizer = optim.Adam(model.parameters(), lr=skipgram.LEARNING_RATE)
 
 if skipgram.MINIMODE:
     print(f"Inputs:")
-    print([(getTokenFromId(x[0]), getTokenFromId(x[1])) for x in final_skipgram_data], sep='\n')
+    print([(getTokenFromId(x[0]), getTokenFromId(x[1])) for x in final_skipgram_data[:10]], sep='\n')
 
 # Training loop
 for epoch in range(skipgram.EPOCHS):
     total_loss = 0
-    prgs = tqdm.tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
-    for targets, contexts in prgs:
+    batches = tqdm.tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
+    for batch in batches:
+        targets, contexts = batch
         targets, contexts = targets.to(device), contexts.to(device)
+
         optimizer.zero_grad()
-        loss = model(targets, contexts)
-        # loss = criterion(outputs, contexts)
+        model_output_logits = model(targets)
+        loss = criterion(model_output_logits, contexts)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
