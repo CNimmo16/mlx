@@ -232,6 +232,12 @@ else:
 
 # Train model
 wandb.init(project='word2vec', name='skipgram-mini' if skipgram.MINIMODE else 'skipgram')
+wandb.config = {
+    "learning_rate": skipgram.LEARNING_RATE,
+    "embedding_dim": skipgram.EMBEDDING_DIM,
+    "batch_size": skipgram.BATCH_SIZE,
+    "epochs": skipgram.EPOCHS
+}
 
 # Dataset and DataLoader
 targets = [w[0] for w in final_skipgram_data] # all the "targets"
