@@ -2,7 +2,6 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import torch
-import torch.nn as nn
 import numpy as np
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
@@ -271,7 +270,7 @@ model = skipgram.Model(vocab.size + 1, skipgram.EMBEDDING_DIM)
 
 model.to(device)
 
-criterion = nn.CrossEntropyLoss()
+criterion = torch.nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=skipgram.LEARNING_RATE)
 
 # Training loop
@@ -296,7 +295,7 @@ for epoch in range(skipgram.EPOCHS):
         word_similarities = []
         for i in range(len(vocab)):
             B =  model.embeddings.weight[i].unsqueeze(0)
-            cosine_similarity = F.cosine_similarity(A, B, dim=1)
+            cosine_similarity = torch.nn.functional.cosine_similarity(A, B, dim=1)
             word_similarities.append((getTokenFromId(i), cosine_similarity.item()))
         word_similarities = sorted(word_similarities, key=lambda x: x[1], reverse=True)
         return word_similarities[:n]
