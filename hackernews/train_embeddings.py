@@ -29,10 +29,6 @@ nltk.download('stopwords')
 torch.manual_seed(42)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-MINI = int(os.environ.get('FULLRUN', '0')) == 0
-
-print(f"MINI MODE: {MINI}")
-
 items_table = "hacker_news.items"
 
 # Tokenization
@@ -61,16 +57,20 @@ pipeline = [
 print("Fetching unique tokens from database...")
 
 ## take the most common tokens
-limit = skipgram.VOCAB_SIZE * 1.1 # 10% more to account for duplicates after stemming etc. (removed later)
-tokens = cache.query("words", f"""SELECT
-    lower(unnest(string_to_array(regexp_replace(title, '[^a-zA-Z0-9'']', ' ', 'g'), ' '))) AS token,
-    count(*) AS count
-    FROM {items_table}
-    WHERE type = 'story' AND title IS NOT null
-    GROUP BY token
-    ORDER BY count DESC
-    LIMIT {limit}
-""")
+if skipgram.MINIMODE:
+    mlDef = "Machine learning (ML) is a branch of artificial intelligence (AI) that enables computers to learn from data and make decisions or predictions without being explicitly programmed. Instead of following rigid rules, machine learning models recognize patterns in data and improve their performance over time."
+    tokens = pd.DataFrame({ 'token': mlDef.split(' '), 'count': [1 for x in mlDef.split(' ')] })
+else:
+    limit = skipgram.MAX_VOCAB_SIZE * 1.1 # 10% more to account for duplicates after stemming etc. (removed later)
+    tokens = cache.query("words", f"""SELECT
+        lower(unnest(string_to_array(regexp_replace(title, '[^a-zA-Z0-9'']', ' ', 'g'), ' '))) AS token,
+        count(*) AS count
+        FROM {items_table}
+        WHERE type = 'story' AND title IS NOT null
+        GROUP BY token
+        ORDER BY count DESC
+        LIMIT {limit}
+    """)
 
 print(f"Got {len(tokens)} unique tokens")
 
@@ -86,9 +86,9 @@ def runPipeline(text: str):
     return ret
 vocab = tokens['token'].apply(runPipeline)
 
-vocab = vocab.drop_duplicates(keep='first')[:skipgram.VOCAB_SIZE]
+vocab = vocab.drop_duplicates(keep='first')[:skipgram.MAX_VOCAB_SIZE]
 
-print(f"Got {len(vocab)} tokens after truncating to {skipgram.VOCAB_SIZE}")
+print(f"Got {len(vocab)} tokens after truncating to {skipgram.MAX_VOCAB_SIZE}")
 
 ## add unknown token
 vocab = pd.concat([vocab, pd.Series(['unk'])]).reset_index(drop=True)
@@ -106,9 +106,9 @@ def getIdFromToken(token: str):
         return int(vocab.at['unk', 'id'])
 
 def getTokenFromId(id: float):
-    return vocab[vocab['id'] == id].index
+    return vocab[vocab['id'] == id].index.values[0]
 
-vocab.to_csv(os.path.join(dirname, 'data/vocab.generated.csv'), index=True)
+vocab.to_csv(os.path.join(dirname, f"data/vocab{'__mini' if skipgram.MINIMODE else ''}.generated.csv"), index=True)
 
 # Generate training data
 
@@ -140,119 +140,122 @@ def processText(text: str):
 
 print("====")
 
-wiki_data_path = os.path.join(dirname, f"data/wiki_skipgram_data{'__mini' if MINI else ''}.generated.csv")
-try:
-    wiki_data = pd.read_csv(wiki_data_path)
-    print("CACHE HIT: Got existing wiki skipgram data from file...")
-except:
-    print("Loading wiki articles from file...")
+if skipgram.MINIMODE:
+    targets, contexts = processText(mlDef)
 
-    def load_articles():
-        ret = pd.read_xml(os.path.join(dirname, 'data/enwik8.xml'), xpath='//pages/page/revision/text')
+    processed = pd.DataFrame({ 'target': targets, 'context': contexts })
 
-        return ret[ret['text'].str.match(r'^( )*#redirect', case=False) == False].reset_index()
+    processed.dropna(inplace=True)
 
-    wiki_articles = cache.frame(
-        ref='wiki_articles',
-        version="0",
-        getFrame=load_articles,
-    )
+    final_skipgram_data = list(processed.itertuples(index=False, name=None))
+else:
+    wiki_data_path = os.path.join(dirname, f"data/wiki_skipgram_data.generated.csv")
+    try:
+        wiki_data = pd.read_csv(wiki_data_path)
+        print("CACHE HIT: Got existing wiki skipgram data from file...")
+    except:
+        print("Loading wiki articles from file...")
 
-    if MINI:
-        wiki_articles = wiki_articles[:10]
+        def load_articles():
+            ret = pd.read_xml(os.path.join(dirname, 'data/enwik8.xml'), xpath='//pages/page/revision/text')
 
-    chunk_size = 1000
-    header = True
-    prgs = tqdm.tqdm(np.array_split(wiki_articles, math.ceil(len(wiki_articles) / chunk_size)),
-                        desc=f"Building skipgram data for {len(wiki_articles)} wiki articles", leave=False)
-    for chunk in prgs:
-        targets_and_contexts = chunk['text'].swifter.progress_bar(False).apply(processText)
+            return ret[ret['text'].str.match(r'^( )*#redirect', case=False) == False].reset_index()
 
-        targets = [d[0] for d in targets_and_contexts]
-        contexts = [d[1] for d in targets_and_contexts]
+        wiki_articles = cache.frame(
+            ref='wiki_articles',
+            version="0",
+            getFrame=load_articles,
+        )
 
-        flat_targets = [val for sublist in targets for val in sublist]
-        flat_contexts = [val for sublist in contexts for val in sublist]
+        if skipgram.MINIMODE:
+            wiki_articles = wiki_articles[:10]
 
-        processed = pd.DataFrame({ 'target': flat_targets, 'context': flat_contexts })
-        
-        processed.dropna(inplace=True)
+        chunk_size = 1000
+        header = True
+        prgs = tqdm.tqdm(np.array_split(wiki_articles, math.ceil(len(wiki_articles) / chunk_size)),
+                            desc=f"Building skipgram data for {len(wiki_articles)} wiki articles", leave=False)
+        for chunk in prgs:
+            targets_and_contexts = chunk['text'].swifter.progress_bar(False).apply(processText)
 
-        processed.to_csv(wiki_data_path, header=header, mode='a', index=False)
+            targets = [d[0] for d in targets_and_contexts]
+            contexts = [d[1] for d in targets_and_contexts]
 
-        header = False
-    wiki_data = pd.read_csv(wiki_data_path)
+            flat_targets = [val for sublist in targets for val in sublist]
+            flat_contexts = [val for sublist in contexts for val in sublist]
 
-print("> transforming to list...")
-wiki_skipgram_data = list(wiki_data.itertuples(index=False, name=None))
+            processed = pd.DataFrame({ 'target': flat_targets, 'context': flat_contexts })
+            
+            processed.dropna(inplace=True)
 
-print(f"Generated {len(wiki_skipgram_data)} skipgram data points from wiki articles")
+            processed.to_csv(wiki_data_path, header=header, mode='a', index=False)
 
-wiki_data_size = int(skipgram.TRAINING_DATA_SIZE * (1 - skipgram.HACKER_NEWS_RATIO))
-print(f"Truncating to {wiki_data_size} data points...")
-wiki_skipgram_data = wiki_skipgram_data[:wiki_data_size]
+            header = False
+        wiki_data = pd.read_csv(wiki_data_path)
 
-## Get skipgram data from hacker news posts
+    print("> transforming to list...")
+    wiki_skipgram_data = list(wiki_data.itertuples(index=False, name=None))
 
-print("====")
+    print(f"Generated {len(wiki_skipgram_data)} skipgram data points from wiki articles")
 
-hn_data_path = os.path.join(dirname, f"data/hn_skipgram_data{'__mini' if MINI else ''}.generated.csv")
-try:
-    hn_data = pd.read_csv(os.path.join(dirname, hn_data_path))
-    print("CACHE HIT: Got existing hacker news skipgram data from file...")
-except:
-    print("Loading hacker news posts from db...")
+    wiki_data_size = int(skipgram.TRAINING_DATA_SIZE * (1 - skipgram.HACKER_NEWS_RATIO))
+    print(f"Truncating to {wiki_data_size} data points...")
+    wiki_skipgram_data = wiki_skipgram_data[:wiki_data_size]
 
-    hn_posts = cache.query("titles", f"""SELECT
-        title
-        FROM {items_table}
-        WHERE type = 'story' AND title IS NOT null
-        LIMIT {'100' if MINI else '1000000'}
-    """)[['title']].rename(columns={'title': 'text'})
+    ## Get skipgram data from hacker news posts
 
-    chunk_size = 1000
-    header = True
-    prgs = tqdm.tqdm(np.array_split(hn_posts, math.ceil(len(hn_posts) / chunk_size)),
-                        desc=f"Building skipgram data for {len(hn_posts)} hacker news posts", leave=False)
-    for chunk in prgs:
-        targets_and_contexts = chunk['text'].swifter.progress_bar(False).apply(processText)
+    print("====")
 
-        targets = [d[0] for d in targets_and_contexts]
-        contexts = [d[1] for d in targets_and_contexts]
+    hn_data_path = os.path.join(dirname, f"data/hn_skipgram_data.generated.csv")
+    try:
+        hn_data = pd.read_csv(os.path.join(dirname, hn_data_path))
+        print("CACHE HIT: Got existing hacker news skipgram data from file...")
+    except:
+        print("Loading hacker news posts from db...")
 
-        flat_targets = [val for sublist in targets for val in sublist]
-        flat_contexts = [val for sublist in contexts for val in sublist]
+        hn_posts = cache.query("titles", f"""SELECT
+            title
+            FROM {items_table}
+            WHERE type = 'story' AND title IS NOT null
+            LIMIT 1000000
+        """)[['title']].rename(columns={'title': 'text'})
 
-        processed = pd.DataFrame({ 'target': flat_targets, 'context': flat_contexts })
-        
-        processed.dropna(inplace=True)
+        chunk_size = 1000
+        header = True
+        prgs = tqdm.tqdm(np.array_split(hn_posts, math.ceil(len(hn_posts) / chunk_size)),
+                            desc=f"Building skipgram data for {len(hn_posts)} hacker news posts", leave=False)
+        for chunk in prgs:
+            targets_and_contexts = chunk['text'].swifter.progress_bar(False).apply(processText)
 
-        processed.to_csv(hn_data_path, header=header, mode='a', index=False)
+            targets = [d[0] for d in targets_and_contexts]
+            contexts = [d[1] for d in targets_and_contexts]
 
-        header = False
-    hn_data = pd.read_csv(hn_data_path)
+            flat_targets = [val for sublist in targets for val in sublist]
+            flat_contexts = [val for sublist in contexts for val in sublist]
 
-print("> transforming to list...")
-hn_skipgram_data = list(hn_data.itertuples(index=False, name=None))
+            processed = pd.DataFrame({ 'target': flat_targets, 'context': flat_contexts })
+            
+            processed.dropna(inplace=True)
 
-hn_data_size = int(skipgram.TRAINING_DATA_SIZE * skipgram.HACKER_NEWS_RATIO)
-print(f"Truncating to {hn_data_size} data points...")
-hn_skipgram_data = hn_skipgram_data[:hn_data_size]
+            processed.to_csv(hn_data_path, header=header, mode='a', index=False)
 
-print(f"Generated {len(hn_skipgram_data)} skipgram data points from hacker news posts")
+            header = False
+        hn_data = pd.read_csv(hn_data_path)
 
-final_skipgram_data = wiki_skipgram_data + hn_skipgram_data
+    print("> transforming to list...")
+    hn_skipgram_data = list(hn_data.itertuples(index=False, name=None))
 
-print(f"Concatenated skipgram data resulting in {len(final_skipgram_data)} total datapoints")
+    hn_data_size = int(skipgram.TRAINING_DATA_SIZE * skipgram.HACKER_NEWS_RATIO)
+    print(f"Truncating to {hn_data_size} data points...")
+    hn_skipgram_data = hn_skipgram_data[:hn_data_size]
 
-if MINI:
-    MINI_MODE_SAMPLE_SIZE = 100
-    final_skipgram_data = sample(final_skipgram_data, MINI_MODE_SAMPLE_SIZE)
-    print(f"MINI MODE: sampled {MINI_MODE_SAMPLE_SIZE} data points for final training data")
+    print(f"Generated {len(hn_skipgram_data)} skipgram data points from hacker news posts")
 
+    final_skipgram_data = wiki_skipgram_data + hn_skipgram_data
+
+    print(f"Concatenated skipgram data resulting in {len(final_skipgram_data)} total datapoints")
 
 # Train model
-wandb.init(project='word2vec', name='skipgram-mini' if MINI else 'skipgram')
+wandb.init(project='word2vec', name='skipgram-mini' if skipgram.MINIMODE else 'skipgram')
 
 # Dataset and DataLoader
 token_ids = vocab['id'].to_list()
@@ -273,6 +276,10 @@ model.to(device)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=skipgram.LEARNING_RATE)
 
+if skipgram.MINIMODE:
+    print(f"Inputs:")
+    print([(getTokenFromId(x[0]), getTokenFromId(x[1])) for x in final_skipgram_data], sep='\n')
+
 # Training loop
 for epoch in range(skipgram.EPOCHS):
     total_loss = 0
@@ -286,24 +293,6 @@ for epoch in range(skipgram.EPOCHS):
         optimizer.step()
         total_loss += loss.item()
         wandb.log({'epoch': epoch + 1, 'train-loss': loss.item()})
-
-    #find the n most similar words
-    def most_similar(word, n=5):
-        word_idx = getIdFromToken(word)
-        state_dict = model.state_dict()
-        A =  state_dict['embeddings.weight'][word_idx].unsqueeze(0)
-        word_similarities = []
-        for i in range(len(vocab)):
-            B =  model.embeddings.weight[i].unsqueeze(0)
-            cosine_similarity = torch.nn.functional.cosine_similarity(A, B, dim=1)
-            word_similarities.append((getTokenFromId(i), cosine_similarity.item()))
-        word_similarities = sorted(word_similarities, key=lambda x: x[1], reverse=True)
-        return word_similarities[:n]
-    print('Most similar to dog:')
-    print(most_similar('dog'))
-    
-    if (epoch + 1) % 10 == 0:
-        print(f'Epoch {epoch+1}, Loss: {total_loss/len(dataloader):.4f}')
 
 # Get embeddings
 embeddings = model.embeddings.weight.data
