@@ -256,7 +256,6 @@ if skipgram.MINIMODE:
 
 # Training loop
 for epoch in range(skipgram.EPOCHS):
-    total_loss = 0
     batches = tqdm.tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
     for batch in batches:
         targets, contexts = batch
@@ -267,7 +266,6 @@ for epoch in range(skipgram.EPOCHS):
         loss = criterion(model_output_logits, contexts)
         loss.backward()
         optimizer.step()
-        total_loss += loss.item()
         wandb.log({'epoch': epoch + 1, 'train-loss': loss.item()})
 
 # Save model
