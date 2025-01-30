@@ -31,6 +31,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 MINI = int(os.environ.get('FULLRUN', '0')) == 0
 
+print(f"MINI MODE: {MINI}")
+
 items_table = "hacker_news.items"
 
 # Tokenization
