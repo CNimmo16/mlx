@@ -29,7 +29,7 @@ nltk.download('stopwords')
 torch.manual_seed(42)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-MINI=True
+MINI = int(os.environ.get('FULLRUN', '0')) == 0
 
 items_table = "hacker_news.items"
 
