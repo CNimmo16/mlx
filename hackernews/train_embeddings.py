@@ -208,7 +208,7 @@ except:
         title
         FROM {items_table}
         WHERE type = 'story' AND title IS NOT null
-        LIMIT {'100' if MINI else '100000'}
+        LIMIT {'100' if MINI else '1000000'}
     """)[['title']].rename(columns={'title': 'text'})
 
     chunk_size = 1000
@@ -244,7 +244,7 @@ print(f"Generated {len(hn_skipgram_data)} skipgram data points from hacker news 
 
 final_skipgram_data = wiki_skipgram_data + hn_skipgram_data
 
-print(f"Concatenated skipgram data resulting in {len(final_skipgram_data)} datapoints")
+print(f"Concatenated skipgram data resulting in {len(final_skipgram_data)} total datapoints")
 
 if MINI:
     MINI_MODE_SAMPLE_SIZE = 100
@@ -253,7 +253,7 @@ if MINI:
 
 
 # Train model
-wandb.init(project='word2vec', name='model1')
+wandb.init(project='word2vec', name='skipgram-mini' if MINI else 'skipgram')
 
 # Dataset and DataLoader
 token_ids = vocab['id'].to_list()
@@ -286,7 +286,7 @@ for epoch in range(skipgram.EPOCHS):
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
-        wandb.log({'loss': loss.item()})
+        wandb.log({'epoch': epoch + 1, 'train-loss': loss.item()})
     
     if (epoch + 1) % 10 == 0:
         print(f'Epoch {epoch+1}, Loss: {total_loss/len(dataloader):.4f}')
