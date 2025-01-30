@@ -303,7 +303,7 @@ for epoch in range(skipgram.EPOCHS):
 print('Saving...')
 artifacts.save_artifact(model.state_dict(), 'model-weights', 'model', os.path.join(dirname, 'data/weights.generated.pt'))
 
-pd.DataFrame(model.embeddings.weight.data).to_csv(os.path.join(dirname, 'data/embeddings.generated.csv'), index=False)
+pd.DataFrame(model.embeddings.weight.data.cpu()).to_csv(os.path.join(dirname, 'data/embeddings.generated.csv'), index=False)
 artifacts.save_artifact(None, 'embeddings', 'dataset', os.path.join(dirname, 'data/embeddings.generated.csv'))
 
 artifacts.save_artifact(None, 'vocab', 'dataset', os.path.join(dirname, 'data/vocab.generated.csv'))
