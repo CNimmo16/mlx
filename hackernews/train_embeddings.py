@@ -7,7 +7,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import more_itertools
 import pandas as pd
-from util import cache
+from util import cache, artifacts
 import string
 import nltk
 from ast import literal_eval
@@ -299,19 +299,14 @@ for epoch in range(skipgram.EPOCHS):
         total_loss += loss.item()
         wandb.log({'epoch': epoch + 1, 'train-loss': loss.item()})
 
-# Get embeddings
-embeddings = model.embeddings.weight.data
-
 # Save model
 print('Saving...')
-torch.save(model.state_dict(), os.path.join(dirname, 'data/weights.generated.pt'))
-print('Uploading...')
-weights_artifact = wandb.Artifact('model-weights', type='model')
-weights_artifact.add_file(os.path.join(dirname, 'data/weights.generated.pt'))
-wandb.log_artifact(weights_artifact)
+artifacts.save_artifact(model.state_dict(), 'model-weights', 'model', os.path.join(dirname, 'data/weights.generated.pt'))
 
-vocab_artifact = wandb.Artifact('vocab')
-vocab_artifact.add_file(os.path.join(dirname, 'data/vocab.generated.pt'))
-wandb.log_artifact(vocab_artifact)
+pd.DataFrame(model.embeddings.weight.data).to_csv(os.path.join(dirname, 'data/embeddings.generated.csv'), index=False)
+artifacts.save_artifact(None, 'embeddings', 'dataset', os.path.join(dirname, 'data/embeddings.generated.csv'))
+
+artifacts.save_artifact(None, 'vocab', 'dataset', os.path.join(dirname, 'data/vocab.generated.csv'))
+
 print('Done!')
 wandb.finish()
