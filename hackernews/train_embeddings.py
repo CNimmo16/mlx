@@ -106,7 +106,7 @@ def getIdFromToken(token: str):
         return int(vocab.at['unk', 'id'])
 
 def getTokenFromId(id: float):
-    return vocab.at[id, 'token']
+    return vocab[vocab['id'] == id].index
 
 vocab.to_csv(os.path.join(dirname, 'data/vocab.generated.csv'), index=True)
 
