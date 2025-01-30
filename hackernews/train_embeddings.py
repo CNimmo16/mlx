@@ -261,12 +261,12 @@ else:
 wandb.init(project='word2vec', name='skipgram-mini' if skipgram.MINIMODE else 'skipgram')
 
 # Dataset and DataLoader
-inputs = [w[0] for w in final_skipgram_data] # all the "targets"
-targets = [w[1] for w in final_skipgram_data] # all the "contexts"
-input_tensor = torch.LongTensor(inputs)
-target_tensor = torch.LongTensor(targets)
+targets = [w[0] for w in final_skipgram_data] # all the "targets"
+contexts = [w[1] for w in final_skipgram_data] # all the "contexts"
+input_tensor = torch.LongTensor(targets)
+expected_output_tensor = torch.LongTensor(contexts)
 
-dataset = torch.utils.data.TensorDataset(input_tensor, target_tensor)
+dataset = torch.utils.data.TensorDataset(input_tensor, expected_output_tensor)
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=10 if skipgram.MINIMODE else 512, shuffle=True)
 
 # Initialize model, loss, and optimizer
