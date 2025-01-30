@@ -27,6 +27,7 @@ dirname = os.path.dirname(__file__)
 nltk.download('stopwords')
 
 torch.manual_seed(42)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 MINI=True
 
@@ -266,17 +267,18 @@ dataloader = DataLoader(dataset, batch_size=skipgram.BATCH_SIZE, shuffle=True)
 
 # Initialize model, loss, and optimizer
 model = skipgram.Model(vocab.size + 1, skipgram.EMBEDDING_DIM)
+
+model.to(device)
+
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=skipgram.LEARNING_RATE)
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model.to(device)
 
 # Training loop
 for epoch in range(skipgram.EPOCHS):
     total_loss = 0
     prgs = tqdm.tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
     for targets, contexts in prgs:
+        targets, contexts = targets.to(device), contexts.to(device)
         optimizer.zero_grad()
         outputs = model(targets)
         loss = criterion(outputs, contexts)
