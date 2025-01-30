@@ -16,7 +16,8 @@ dependencies = [
     "swifter (>=1.4.0,<2.0.0)",
     "sqlalchemy (>=2.0.37,<3.0.0)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
-    "lxml (>=5.3.0,<6.0.0)"
+    "lxml (>=5.3.0,<6.0.0)",
+    "more-itertools (>=10.6.0,<11.0.0)"
 ]
 
 

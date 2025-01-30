@@ -6,6 +6,7 @@ import torch.nn as nn
 import numpy as np
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+import more_itertools
 import pandas as pd
 from util import cache
 import string
@@ -140,8 +141,9 @@ def processText(text: str):
 
 print("====")
 
+wiki_data_path = os.path.join(dirname, f"data/wiki_skipgram_data{'__mini' if MINI else ''}.generated.csv")
 try:
-    wiki_data = pd.read_csv(os.path.join(dirname, 'data/wiki_skipgram_data.generated.csv'))
+    wiki_data = pd.read_csv(wiki_data_path)
     print("CACHE HIT: Got existing wiki skipgram data from file...")
 except:
     print("Loading wiki articles from file...")
@@ -156,6 +158,9 @@ except:
         version="0",
         getFrame=load_articles,
     )
+
+    if MINI:
+        wiki_articles = wiki_articles[:10]
 
     chunk_size = 1000
     header = True
@@ -174,10 +179,10 @@ except:
         
         processed.dropna(inplace=True)
 
-        processed.to_csv(os.path.join(dirname, 'data/wiki_skipgram_data.generated.csv'), header=header, mode='a', index=False)
+        processed.to_csv(wiki_data_path, header=header, mode='a', index=False)
 
         header = False
-    wiki_data = pd.read_csv(os.path.join(dirname, 'data/wiki_skipgram_data.generated.csv'))
+    wiki_data = pd.read_csv(wiki_data_path)
 
 print("> transforming to list...")
 wiki_skipgram_data = list(wiki_data.itertuples(index=False, name=None))
@@ -192,8 +197,9 @@ wiki_skipgram_data = wiki_skipgram_data[:wiki_data_size]
 
 print("====")
 
+hn_data_path = os.path.join(dirname, f"data/hn_skipgram_data{'__mini' if MINI else ''}.generated.csv")
 try:
-    hn_data = pd.read_csv(os.path.join(dirname, 'data/hn_skipgram_data.generated.csv'))
+    hn_data = pd.read_csv(os.path.join(dirname, hn_data_path))
     print("CACHE HIT: Got existing hacker news skipgram data from file...")
 except:
     print("Loading hacker news posts from db...")
@@ -202,7 +208,7 @@ except:
         title
         FROM {items_table}
         WHERE type = 'story' AND title IS NOT null
-        LIMIT 100000
+        LIMIT {'100' if MINI else '100000'}
     """)[['title']].rename(columns={'title': 'text'})
 
     chunk_size = 1000
@@ -222,10 +228,10 @@ except:
         
         processed.dropna(inplace=True)
 
-        processed.to_csv(os.path.join(dirname, 'data/hn_skipgram_data.generated.csv'), header=header, mode='a', index=False)
+        processed.to_csv(hn_data_path, header=header, mode='a', index=False)
 
         header = False
-    hn_data = pd.read_csv(os.path.join(dirname, 'data/hn_skipgram_data.generated.csv'))
+    hn_data = pd.read_csv(hn_data_path)
 
 print("> transforming to list...")
 hn_skipgram_data = list(hn_data.itertuples(index=False, name=None))
@@ -250,22 +256,15 @@ if MINI:
 wandb.init(project='word2vec', name='model1')
 
 # Dataset and DataLoader
-class SkipGramDataset(Dataset):
-    c = 0
-    def __init__(self, data):
-        self.data = data
-    
-    def __len__(self):
-        return len(self.data)
-    
-    def __getitem__(self, idx):
-        target = self.data[idx][0]
-        context = self.data[idx][1]
-        self.c = self.c+1
-        return torch.tensor(target, dtype=torch.long), torch.tensor(context, dtype=torch.long)
+token_ids = vocab['id'].to_list()
 
-dataset = SkipGramDataset(final_skipgram_data)
-dataloader = DataLoader(dataset, batch_size=skipgram.BATCH_SIZE, shuffle=True)
+windows = list(more_itertools.windowed(token_ids, 3))
+inputs = [w[1] for w in windows]
+targets = [[w[0], w[2]] for w in windows]
+input_tensor = torch.LongTensor(inputs)
+target_tensor = torch.LongTensor(targets)
+dataset = torch.utils.data.TensorDataset(input_tensor, target_tensor)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=512, shuffle=True)
 
 # Initialize model, loss, and optimizer
 model = skipgram.Model(vocab.size + 1, skipgram.EMBEDDING_DIM)
@@ -282,8 +281,8 @@ for epoch in range(skipgram.EPOCHS):
     for targets, contexts in prgs:
         targets, contexts = targets.to(device), contexts.to(device)
         optimizer.zero_grad()
-        outputs = model(targets)
-        loss = criterion(outputs, contexts)
+        loss = model(targets, contexts)
+        # loss = criterion(outputs, contexts)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
