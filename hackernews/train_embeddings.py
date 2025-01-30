@@ -21,6 +21,9 @@ import swifter # do not remove - used indirectly by DataFrame.swifter
 import importlib
 importlib.reload(cache)
 
+import os
+dirname = os.path.dirname(__file__)
+
 torch.manual_seed(42)
 
 MINI=True
@@ -100,7 +103,7 @@ def getIdFromToken(token: str):
 def getTokenFromId(id: float):
     return vocab.at[id, 'token']
 
-vocab.to_csv('./data/vocab.generated.csv', index=True)
+vocab.to_csv(os.path.join(dirname, 'data/vocab.generated.csv'), index=True)
 
 # Generate training data
 
@@ -133,13 +136,13 @@ def processText(text: str):
 print("====")
 
 try:
-    wiki_data = pd.read_csv('./data/wiki_skipgram_data.generated.csv')
+    wiki_data = pd.read_csv(os.path.join(dirname, 'data/wiki_skipgram_data.generated.csv'))
     print("CACHE HIT: Got existing wiki skipgram data from file...")
 except:
     print("Loading wiki articles from file...")
 
     def load_articles():
-        ret = pd.read_xml('./data/enwik8.xml', xpath='//pages/page/revision/text')
+        ret = pd.read_xml(os.path.join(dirname, 'data/enwik8.xml', xpath='//pages/page/revision/text'))
 
         return ret[ret['text'].str.match(r'^( )*#redirect', case=False) == False].reset_index()
 
@@ -166,10 +169,10 @@ except:
         
         processed.dropna(inplace=True)
 
-        processed.to_csv('./data/wiki_skipgram_data.generated.csv', header=header, mode='a', index=False)
+        processed.to_csv(os.path.join(dirname, 'data/wiki_skipgram_data.generated.csv'), header=header, mode='a', index=False)
 
         header = False
-    wiki_data = pd.read_csv('./data/wiki_skipgram_data.generated.csv')
+    wiki_data = pd.read_csv(os.path.join(dirname, 'data/wiki_skipgram_data.generated.csv'))
 
 print("> transforming to list...")
 wiki_skipgram_data = list(wiki_data.itertuples(index=False, name=None))
@@ -185,7 +188,7 @@ wiki_skipgram_data = wiki_skipgram_data[:wiki_data_size]
 print("====")
 
 try:
-    hn_data = pd.read_csv('./data/hn_skipgram_data.generated.csv')
+    hn_data = pd.read_csv(os.path.join(dirname, 'data/hn_skipgram_data.generated.csv'))
     print("CACHE HIT: Got existing hacker news skipgram data from file...")
 except:
     print("Loading hacker news posts from db...")
@@ -214,10 +217,10 @@ except:
         
         processed.dropna(inplace=True)
 
-        processed.to_csv('./data/hn_skipgram_data.generated.csv', header=header, mode='a', index=False)
+        processed.to_csv(os.path.join(dirname, 'data/hn_skipgram_data.generated.csv'), header=header, mode='a', index=False)
 
         header = False
-    hn_data = pd.read_csv('./data/hn_skipgram_data.generated.csv')
+    hn_data = pd.read_csv(os.path.join(dirname, 'data/hn_skipgram_data.generated.csv'))
 
 print("> transforming to list...")
 hn_skipgram_data = list(hn_data.itertuples(index=False, name=None))
@@ -288,10 +291,10 @@ embeddings = model.embeddings.weight.data
 
 # Save model
 print('Saving...')
-torch.save(model.state_dict(), './data/weights.generated.pt')
+torch.save(model.state_dict(), os.path.join(dirname, 'data/weights.generated.pt'))
 print('Uploading...')
 artifact = wandb.Artifact('model-weights', type='model')
-artifact.add_file('./data/weights.generated.pt')
+artifact.add_file(os.path.join(dirname, 'data/weights.generated.pt'))
 wandb.log_artifact(artifact)
 print('Done!')
 wandb.finish()
