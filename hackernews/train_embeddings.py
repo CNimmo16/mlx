@@ -117,6 +117,8 @@ def tokenize(text):
     return [token if token in vocab.index else 'unk' for token in processed_tokens]
 
 def create_skipgram_data(tokens, window_size):
+    tokens = [token for token in tokens if token != getIdFromToken('unk')]
+    print(list(map(getTokenFromId, tokens)))
     targets = []
     contexts = []
     for i in range(len(tokens)):
@@ -129,6 +131,7 @@ def create_skipgram_data(tokens, window_size):
         for c in context:
             targets.append(target)
             contexts.append(c)
+            print(getTokenFromId(target), getTokenFromId(c))
     return targets, contexts
 
 def processText(text: str):
