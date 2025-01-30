@@ -179,7 +179,7 @@ wiki_skipgram_data = list(wiki_data.itertuples(index=False, name=None))
 
 print(f"Generated {len(wiki_skipgram_data)} skipgram data points from wiki articles")
 
-wiki_data_size = skipgram.TRAINING_DATA_SIZE * (1 - skipgram.HACKER_NEWS_RATIO)
+wiki_data_size = int(skipgram.TRAINING_DATA_SIZE * (1 - skipgram.HACKER_NEWS_RATIO))
 print(f"Truncating to {wiki_data_size} data points...")
 wiki_skipgram_data = wiki_skipgram_data[:wiki_data_size]
 
@@ -225,7 +225,7 @@ except:
 print("> transforming to list...")
 hn_skipgram_data = list(hn_data.itertuples(index=False, name=None))
 
-hn_data_size = skipgram.TRAINING_DATA_SIZE * skipgram.HACKER_NEWS_RATIO
+hn_data_size = int(skipgram.TRAINING_DATA_SIZE * skipgram.HACKER_NEWS_RATIO)
 print(f"Truncating to {hn_data_size} data points...")
 hn_skipgram_data = hn_skipgram_data[:hn_data_size]
 
