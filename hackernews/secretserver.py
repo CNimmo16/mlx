@@ -37,8 +37,8 @@ async def root(request: Request, post_title: Annotated[str, Form()]):
     else:
         res = requests.get(f"https://hn.algolia.com/api/v1/search?query={post_title}&tags=story")
         response = json.loads(res.text)
-        match = response['hits'][0]
-        if (match and similar(post_title, match['title']) > 0.9):
+        if (len(response['hits']) > 0 and similar(post_title, match['title']) > 0.9):
+            match = response['hits'][0]
             score = match['points']
             score = random.randint(int(score * 0.75), int(score * 1.25))
         else:
