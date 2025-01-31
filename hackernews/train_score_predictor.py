@@ -85,7 +85,6 @@ class PostDataset(Dataset):
             self.karma = karma_scaler.transform(karma)
 
         log_upvotes = np.log1p(upvotes) 
-        print(log_upvotes)
         self.upvotes = log_upvotes.reshape(-1, 1)
 
     def __len__(self):
