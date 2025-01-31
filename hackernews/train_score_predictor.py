@@ -14,6 +14,7 @@ import wandb
 import embeddings
 import swifter # do not remove - used indirectly by DataFrame.swifter
 import os
+import tqdm
 dirname = os.path.dirname(__file__)
 
 wandb.init(project='word2vec', name='upvote_predictor-mini' if upvote_predictor.MINIMODE else 'upvote_predictor')
@@ -39,7 +40,7 @@ hn_posts = cache.query("hn_posts_for_predictor", f"""SELECT
     FROM {items_table}
     INNER JOIN hacker_news.users u ON {items_table}.by = u.id
     WHERE type = 'story' AND title IS NOT null
-    LIMIT {100 if upvote_predictor.MINIMODE else 10000000}
+    LIMIT {100 if upvote_predictor.MINIMODE else 1000000}
 """)
 
 na_posts = hn_posts[hn_posts['title'].isna()]
@@ -132,7 +133,7 @@ def train_model(model, train_loader, val_loader, epochs=100, lr=0.001):
         model.train()
         train_loss = 0.0
         
-        for embeddings, karma, upvotes in train_loader:
+        for embeddings, karma, upvotes in tqdm.tqdm(train_loader, desc=f"Epoch {epoch+1}", leave=False):
             embeddings = embeddings.to(device)
             karma = karma.to(device)
             upvotes = upvotes.to(device).squeeze()
