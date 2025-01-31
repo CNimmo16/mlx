@@ -52,7 +52,11 @@ print("Getting embeddings for titles")
 
 hn_posts['embeddings'] = hn_posts['title'].swifter.apply(embeddings.get_embeddings_for_title)
 
-hn_posts.dropna()
+na_embeddings = hn_posts[hn_posts['embeddings'].isna()]
+
+print(f"Dropping {len(na_embeddings)} posts with no embeddings (no recognised words)")
+
+hn_posts.dropna(inplace=True)
 
 # 1. Define Dataset Class with Normalization
 class PostDataset(Dataset):
