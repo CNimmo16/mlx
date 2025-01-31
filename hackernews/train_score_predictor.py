@@ -12,6 +12,7 @@ import numpy as np
 from models import skipgram, upvote_predictor
 import wandb
 import embeddings
+import swifter # do not remove - used indirectly by DataFrame.swifter
 import os
 dirname = os.path.dirname(__file__)
 
@@ -29,6 +30,8 @@ loaded_artifacts = artifacts.load_artifacts()
 
 vocab = loaded_artifacts['vocab']
 
+print("Fetching posts from db")
+
 hn_posts = cache.query("hn_posts_for_predictor", f"""SELECT
     title,
     karma,
@@ -39,10 +42,15 @@ hn_posts = cache.query("hn_posts_for_predictor", f"""SELECT
     LIMIT {100 if upvote_predictor.MINIMODE else 10000000}
 """)
 
-hn_posts['embeddings'] = hn_posts['title'].apply(embeddings.get_embeddings_for_title)
+na_posts = hn_posts[hn_posts['title'].isna()]
+
+print(f"Dropping {len(na_posts)} posts with missing titles")
 
 hn_posts.dropna(inplace=True)
 
+print("Getting embeddings for titles")
+
+hn_posts['embeddings'] = hn_posts['title'].swifter.apply(embeddings.get_embeddings_for_title)
 
 # 1. Define Dataset Class with Normalization
 class PostDataset(Dataset):
@@ -104,7 +112,7 @@ def train_model(model, train_loader, val_loader, epochs=100, lr=0.001):
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
     best_val_loss = float('inf')
-    best_loss_state_dict = None
+    best_state_dict = None
     
     for epoch in range(epochs):
         # Training phase
@@ -150,10 +158,10 @@ def train_model(model, train_loader, val_loader, epochs=100, lr=0.001):
         # Save best model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_loss_state_dict = model.state_dict()
+            best_state_dict = model.state_dict()
     
     print('Training complete')
-    artifacts.save_artifact(best_loss_state_dict, 'predictor-weights', 'model', os.path.join(dirname, 'data/predictor-weights.generated.pt'))
+    artifacts.save_artifact(best_state_dict, 'predictor-weights', 'model', os.path.join(dirname, 'data/predictor-weights.generated.pt'))
     return model
 
 # Generate fake data (replace with your actual data)
