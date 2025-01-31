@@ -67,7 +67,8 @@ class PostDataset(Dataset):
             self.embed_scaler = sklearn.preprocessing.StandardScaler()
             self.title_embeds = self.embed_scaler.fit_transform(title_embeddings)
 
-            artifacts.save_artifact(self.embed_scaler, 'embed-scaler', 'model', os.path.join(dirname, 'data/embed-scaler.generated.pt'))
+            if not upvote_predictor.MINIMODE:
+                artifacts.save_artifact(self.embed_scaler, 'embed-scaler', 'model', os.path.join(dirname, 'data/embed-scaler.generated.pt'))
 
         else:
             self.embed_scaler = embed_scaler
@@ -78,7 +79,8 @@ class PostDataset(Dataset):
             self.karma_scaler = sklearn.preprocessing.StandardScaler()
             self.karma = self.karma_scaler.fit_transform(karma)
 
-            artifacts.save_artifact(self.karma_scaler, 'karma-scaler', 'model', os.path.join(dirname, 'data/karma-scaler.generated.pt'))
+            if not upvote_predictor.MINIMODE:   
+                artifacts.save_artifact(self.karma_scaler, 'karma-scaler', 'model', os.path.join(dirname, 'data/karma-scaler.generated.pt'))
         else:
             self.karma_scaler = karma_scaler
             self.karma = karma_scaler.transform(karma)
@@ -172,7 +174,8 @@ def train_model(model, train_loader, val_loader, epochs=100, lr=0.001):
             best_state_dict = model.state_dict()
     
     print('Training complete')
-    artifacts.save_artifact(best_state_dict, 'predictor-weights', 'model', os.path.join(dirname, 'data/predictor-weights.generated.pt'))
+    if not upvote_predictor.MINIMODE:
+        artifacts.save_artifact(best_state_dict, 'predictor-weights', 'model', os.path.join(dirname, 'data/predictor-weights.generated.pt'))
     return model
 
 # Generate fake data (replace with your actual data)

@@ -263,9 +263,10 @@ for epoch in range(skipgram.EPOCHS):
 
 # Save model
 print('Saving...')
-artifacts.save_artifact(model.state_dict(), 'skipgram-weights', 'model', os.path.join(dirname, 'data/skipgram-weights.generated.pt'))
+if not skipgram.MINIMODE:
+    artifacts.save_artifact(model.state_dict(), 'skipgram-weights', 'model', os.path.join(dirname, 'data/skipgram-weights.generated.pt'))
 
-artifacts.save_artifact(None, 'vocab', 'dataset', os.path.join(dirname, 'data/vocab.generated.csv'))
+    artifacts.save_artifact(None, 'vocab', 'dataset', os.path.join(dirname, 'data/vocab.generated.csv'))
 
 print('Done!')
 wandb.finish()
