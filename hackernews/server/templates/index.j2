@@ -1,0 +1,23 @@
+<!DOCTYPE html>    
+</html>
+<html>
+<head>
+    <title>Item Details</title>
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+</head>
+<body>
+    <h1>The post predictor</h1>
+
+    <h2>Enter post details</h2>
+
+    <form method="POST" action="/predict">
+        <input type="text" name="post_title" placeholder="Post title" value="{{ post_title }}">
+        <input type="text" name="username" placeholder="User id" value="{{ username }}">
+        <button type="submit">Go</button>
+    </form>
+
+    {% if prediction %}
+        <p>Predicted upvotes: {{ prediction }}</p>
+    {% endif %}
+</body>
+</html>
