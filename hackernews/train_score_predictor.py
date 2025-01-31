@@ -15,6 +15,7 @@ import embeddings
 import swifter # do not remove - used indirectly by DataFrame.swifter
 import os
 import tqdm
+import joblib
 dirname = os.path.dirname(__file__)
 
 wandb.init(project='word2vec', name='upvote_predictor-mini' if upvote_predictor.MINIMODE else 'upvote_predictor')
@@ -67,7 +68,9 @@ class PostDataset(Dataset):
             self.title_embeds = self.embed_scaler.fit_transform(title_embeddings)
 
             if not upvote_predictor.MINIMODE:
-                artifacts.save_artifact(self.embed_scaler, 'embed-scaler', 'model', os.path.join(dirname, 'data/embed-scaler.generated.pt'))
+                save_path = os.path.join(dirname, 'data/embed-scaler.generated.pt')
+                joblib.dump(self.embed_scaler, save_path)
+                artifacts.store_artifact('embed-scaler', 'model', save_path)
 
         else:
             self.embed_scaler = embed_scaler
@@ -79,7 +82,9 @@ class PostDataset(Dataset):
             self.karma = self.karma_scaler.fit_transform(karma)
 
             if not upvote_predictor.MINIMODE:   
-                artifacts.save_artifact(self.karma_scaler, 'karma-scaler', 'model', os.path.join(dirname, 'data/karma-scaler.generated.pt'))
+                save_path = os.path.join(dirname, 'data/karma-scaler.generated.pt')
+                joblib.dump(self.karma_scaler, save_path)
+                artifacts.store_artifact('karma-scaler', 'model', os.path.join(dirname, 'data/karma-scaler.generated.pt'))
         else:
             self.karma_scaler = karma_scaler
             self.karma = karma_scaler.transform(karma)
@@ -175,7 +180,9 @@ def train_model(model, train_loader, val_loader, epochs=100, lr=0.001):
     
     print('Training complete')
     if not upvote_predictor.MINIMODE:
-        artifacts.save_artifact(best_state_dict, 'predictor-weights', 'model', os.path.join(dirname, 'data/predictor-weights.generated.pt'))
+        model_save_path = os.path.join(dirname, 'data/predictor-weights.generated.pt')
+        torch.save(best_state_dict, model_save_path)
+        artifacts.store_artifact('predictor-weights', 'model', model_save_path)
     return model
 
 print("Starting training")
