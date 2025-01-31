@@ -11,6 +11,9 @@ import sklearn
 import numpy as np
 from models import skipgram, upvote_predictor
 import wandb
+import embeddings
+import os
+dirname = os.path.dirname(__file__)
 
 wandb.init(project='word2vec', name='upvote_predictor-mini' if upvote_predictor.MINIMODE else 'upvote_predictor')
 wandb.config = {
@@ -24,10 +27,7 @@ items_table = "hacker_news.items"
 
 loaded_artifacts = artifacts.load_artifacts()
 
-state_dict = loaded_artifacts['state_dict']
-vocab = loaded_artifacts['vocab'].set_index('token')
-
-embedding_weights = state_dict['embeddings.weight']
+vocab = loaded_artifacts['vocab']
 
 hn_posts = cache.query("hn_posts_for_predictor", f"""SELECT
     title,
@@ -39,23 +39,7 @@ hn_posts = cache.query("hn_posts_for_predictor", f"""SELECT
     LIMIT {100 if upvote_predictor.MINIMODE else 10000000}
 """)
 
-def get_embeddings(title):
-    tokens = tokenization.tokenize(vocab, title)
-    ids = [tokenization.getIdFromToken(vocab, token) for token in tokens if token != 'unk']
-
-    if (len(ids) == 0):
-        return pd.NA
-
-    embeddings = [embedding_weights[id] for id in ids]
-    
-    stacked_embeddings = torch.stack(embeddings)
-
-    # Compute the mean along the token dimension (dim=0)
-    mean_embedding = np.array(torch.mean(stacked_embeddings, dim=0).tolist())
-
-    return mean_embedding
-
-hn_posts['embeddings'] = hn_posts['title'].apply(get_embeddings)
+hn_posts['embeddings'] = hn_posts['title'].apply(embeddings.get_embeddings_for_title)
 
 hn_posts.dropna(inplace=True)
 
@@ -165,7 +149,7 @@ def train_model(model, train_loader, val_loader, epochs=100, lr=0.001):
         # Save best model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            artifacts.save_artifact(model.state_dict(), 'predictor-weights', 'model', 'weights.generated.pt')
+            artifacts.save_artifact(model.state_dict(), 'predictor-weights', 'model', os.path.join(dirname, 'data/predictor-weights.generated.pt'))
     
     print('Training complete')
     return model
