@@ -1,0 +1,4 @@
+__pycache__
+hackernews/data
+*wandb
+.env

@@ -12,9 +12,13 @@
 
     <form method="POST" action="/predict">
         <input type="text" name="post_title" placeholder="Post title" value="{{ post_title }}">
-        <input type="text" name="username" placeholder="User id" value="{{ username }}">
+        <input type="text" name="karma" placeholder="User karma" value="{{ karma }}">
         <button type="submit">Go</button>
     </form>
+
+    {% if error %}
+        <p>{{ error }}</p>
+    {% endif %}
 
     {% if prediction %}
         <p>Predicted upvotes: {{ prediction }}</p>
