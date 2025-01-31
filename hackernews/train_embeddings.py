@@ -97,7 +97,7 @@ def create_skipgram_data(tokens, window_size):
     return targets, contexts
 
 def processText(text: str):
-    tokens = tokenization.tokenize(text)
+    tokens = tokenization.tokenize(vocab, text)
     token_ids = [tokenization.getIdFromToken(vocab, word) for word in tokens]
     return create_skipgram_data(token_ids, skipgram.WINDOW_SIZE)
 
