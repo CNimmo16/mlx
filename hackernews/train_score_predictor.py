@@ -104,6 +104,7 @@ def train_model(model, train_loader, val_loader, epochs=100, lr=0.001):
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
     best_val_loss = float('inf')
+    best_loss_state_dict = None
     
     for epoch in range(epochs):
         # Training phase
@@ -149,9 +150,10 @@ def train_model(model, train_loader, val_loader, epochs=100, lr=0.001):
         # Save best model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            artifacts.save_artifact(model.state_dict(), 'predictor-weights', 'model', os.path.join(dirname, 'data/predictor-weights.generated.pt'))
+            best_loss_state_dict = model.state_dict()
     
     print('Training complete')
+    artifacts.save_artifact(best_loss_state_dict, 'predictor-weights', 'model', os.path.join(dirname, 'data/predictor-weights.generated.pt'))
     return model
 
 # Generate fake data (replace with your actual data)
@@ -171,3 +173,5 @@ model = upvote_predictor.Model(embedding_dim=embedding_dim)
 
 # Train model
 trained_model = train_model(model, train_loader, val_loader, epochs=upvote_predictor.EPOCHS, lr=upvote_predictor.LEARNING_RATE)
+
+wandb.finish()
