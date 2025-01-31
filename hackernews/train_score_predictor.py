@@ -63,6 +63,8 @@ class PostDataset(Dataset):
             self.embed_scaler = sklearn.preprocessing.StandardScaler()
             self.title_embeds = self.embed_scaler.fit_transform(title_embeddings)
 
+            artifacts.save_artifact(self.embed_scaler, 'embed-scaler', 'model', os.path.join(dirname, 'data/embed-scaler.generated.pt'))
+
         else:
             self.embed_scaler = embed_scaler
             self.title_embeds = embed_scaler.transform(title_embeddings)
@@ -71,6 +73,8 @@ class PostDataset(Dataset):
         if karma_scaler is None:
             self.karma_scaler = sklearn.preprocessing.StandardScaler()
             self.karma = self.karma_scaler.fit_transform(karma)
+
+            artifacts.save_artifact(self.karma_scaler, 'karma-scaler', 'model', os.path.join(dirname, 'data/karma-scaler.generated.pt'))
         else:
             self.karma_scaler = karma_scaler
             self.karma = karma_scaler.transform(karma)
