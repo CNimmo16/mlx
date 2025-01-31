@@ -55,3 +55,12 @@ def build_vocab(tokens: pd.DataFrame):
 def tokenize(vocab, text):
     processed_tokens = [run_pipeline(token) for token in text.lower().split()]
     return [token if token in vocab.index else 'unk' for token in processed_tokens]
+
+def getIdFromToken(vocab: pd.DataFrame, token: str):
+    try:
+        return int(vocab.at[token, 'id'])
+    except:
+        return int(vocab.at['unk', 'id'])
+
+def getTokenFromId(vocab: pd.DataFrame, id: float):
+    return vocab[vocab['id'] == id].index.values[0]

@@ -17,7 +17,8 @@ def download_from_wandb(ref: str, file: str):
 def load_artifacts():
     return {
         'vocab': pd.read_csv(download_from_wandb('vocab', 'vocab.generated.csv')),
-        'state_dict': torch.load(download_from_wandb('model-weights', 'weights.generated.pt'), map_location=torch.device('cpu'))
+        'skipgram_state': torch.load(download_from_wandb('skipgram-weights', 'weights.generated.pt'), map_location=torch.device('cpu')),
+        'predictor_state': torch.load(download_from_wandb('predictor-weights', 'weights.generated.pt'), map_location=torch.device('cpu')),
     }
 
 def save_artifact(data, ref: str, type: str, file: str):

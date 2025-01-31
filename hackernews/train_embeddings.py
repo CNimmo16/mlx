@@ -76,21 +76,12 @@ vocab['id'] += 1
 
 vocab.set_index('token', inplace=True)
 
-def getIdFromToken(token: str):
-    try:
-        return int(vocab.at[token, 'id'])
-    except:
-        return int(vocab.at['unk', 'id'])
-
-def getTokenFromId(id: float):
-    return vocab[vocab['id'] == id].index.values[0]
-
 vocab.to_csv(os.path.join(dirname, f"data/vocab{'__mini' if skipgram.MINIMODE else ''}.generated.csv"), index=True)
 
 # Generate training data
 
 def create_skipgram_data(tokens, window_size):
-    tokens = [token for token in tokens if token != getIdFromToken('unk')]
+    tokens = [token for token in tokens if token != tokenization.getIdFromToken(vocab, 'unk')]
     targets = []
     contexts = []
     for i in range(len(tokens)):
@@ -107,7 +98,7 @@ def create_skipgram_data(tokens, window_size):
 
 def processText(text: str):
     tokens = tokenization.tokenize(text)
-    token_ids = [getIdFromToken(word) for word in tokens]
+    token_ids = [tokenization.getIdFromToken(vocab, word) for word in tokens]
     return create_skipgram_data(token_ids, skipgram.WINDOW_SIZE)
 
 # Get skipgram data from wikipedia articles
@@ -256,10 +247,6 @@ model.to(device)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=skipgram.LEARNING_RATE)
 
-if skipgram.MINIMODE:
-    print(f"Inputs:")
-    print([(getTokenFromId(x[0]), getTokenFromId(x[1])) for x in final_skipgram_data[:10]], sep='\n')
-
 # Training loop
 for epoch in range(skipgram.EPOCHS):
     batches = tqdm.tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
@@ -276,7 +263,7 @@ for epoch in range(skipgram.EPOCHS):
 
 # Save model
 print('Saving...')
-artifacts.save_artifact(model.state_dict(), 'model-weights', 'model', os.path.join(dirname, 'data/weights.generated.pt'))
+artifacts.save_artifact(model.state_dict(), 'skipgram-weights', 'model', os.path.join(dirname, 'data/weights.generated.pt'))
 
 pd.DataFrame(model.embeddings.weight.data.cpu()).to_csv(os.path.join(dirname, 'data/embeddings.generated.csv'), index=False)
 artifacts.save_artifact(None, 'embeddings', 'dataset', os.path.join(dirname, 'data/embeddings.generated.csv'))
