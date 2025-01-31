@@ -52,7 +52,7 @@ print("Getting embeddings for titles")
 
 hn_posts['embeddings'] = hn_posts['title'].swifter.apply(embeddings.get_embeddings_for_title)
 
-hn_posts['embeddings'].dropna()
+hn_posts.dropna()
 
 # 1. Define Dataset Class with Normalization
 class PostDataset(Dataset):
@@ -62,6 +62,7 @@ class PostDataset(Dataset):
         if embed_scaler is None:
             self.embed_scaler = sklearn.preprocessing.StandardScaler()
             self.title_embeds = self.embed_scaler.fit_transform(title_embeddings)
+
         else:
             self.embed_scaler = embed_scaler
             self.title_embeds = embed_scaler.transform(title_embeddings)
