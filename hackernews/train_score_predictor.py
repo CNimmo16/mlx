@@ -178,8 +178,7 @@ def train_model(model, train_loader, val_loader, epochs=100, lr=0.001):
         artifacts.save_artifact(best_state_dict, 'predictor-weights', 'model', os.path.join(dirname, 'data/predictor-weights.generated.pt'))
     return model
 
-# Generate fake data (replace with your actual data)
-embedding_dim = skipgram.EMBEDDING_DIM
+print("Starting training")
 
 title_embeddings = hn_posts['embeddings'].values
 karma = hn_posts['karma'].values
@@ -191,7 +190,7 @@ train_loader, val_loader = prepare_loaders(
 )
 
 # Initialize model
-model = upvote_predictor.Model(embedding_dim=embedding_dim)
+model = upvote_predictor.Model(embedding_dim=skipgram.EMBEDDING_DIM)
 
 # Train model
 trained_model = train_model(model, train_loader, val_loader, epochs=upvote_predictor.EPOCHS, lr=upvote_predictor.LEARNING_RATE)
