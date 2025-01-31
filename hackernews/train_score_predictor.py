@@ -52,6 +52,8 @@ print("Getting embeddings for titles")
 
 hn_posts['embeddings'] = hn_posts['title'].swifter.apply(embeddings.get_embeddings_for_title)
 
+hn_posts['embeddings'].dropna()
+
 # 1. Define Dataset Class with Normalization
 class PostDataset(Dataset):
     def __init__(self, title_embeddings, karma, upvotes, embed_scaler=None, karma_scaler=None):
