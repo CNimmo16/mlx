@@ -3,24 +3,25 @@ import torch
 import swifter
 
 from util import artifacts, constants, cache
-from models import two_towers, doc_embedder
+import models
+import models.doc_embedder, models.doc_projector
 
 def cache_doc_encodings():
     torch.no_grad()
 
     data = pd.read_csv(constants.RESULTS_PATH)
 
-    model = two_towers.Model()
+    doc_projector = models.doc_projector.Model()
 
-    state_dict = artifacts.load_artifact('two-towers-weights')
+    doc_state_dict = artifacts.load_artifact('doc-projector-weights', 'model')
 
-    model.load_state_dict(state_dict)
-    model.eval()
+    doc_projector.load_state_dict(doc_state_dict)
+    doc_projector.eval()
 
     def get_doc_encoding(row):
-        doc_embeddings = doc_embedder.get_embeddings_for_doc(row['doc_text'])
+        doc_embeddings = models.doc_embedder.get_embeddings_for_doc(row['doc_text'])
         doc_embeddings = torch.tensor(doc_embeddings)
-        encoded = model.encode_doc(doc_embeddings).detach().tolist()
+        encoded = doc_projector(doc_embeddings).detach().tolist()
         cache.vectors.set(f"encoded_docs:{row['doc_ref']}", encoded)
         return encoded
 

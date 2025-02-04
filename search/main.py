@@ -2,24 +2,25 @@ import pandas as pd
 import torch
 
 from util import artifacts, constants, cache
-from models import query_embedder, two_towers, vectors
+import models
+import models.query_embedder, models.query_projector, models.vectors
 
 MAX_RESULTS = 5
 
 def search(query: str):
-    model = two_towers.Model()
+    query_projector = models.query_projector.Model()
 
-    state_dict = artifacts.load_artifact('two-towers-weights')
+    query_state_dict = artifacts.load_artifact('query-projector-weights', 'model')
 
-    model.load_state_dict(state_dict)
-    model.eval()
+    query_projector.load_state_dict(query_state_dict)
+    query_projector.eval()
 
     rows = pd.read_csv(constants.RESULTS_PATH)
 
-    query_embeddings = query_embedder.get_embeddings_for_query(query)
+    query_embeddings = models.query_embedder.get_embeddings_for_query(query)
     query_embeddings = torch.tensor(query_embeddings)
 
-    encoded_query = model.encode_query(query_embeddings)
+    encoded_query = query_projector(query_embeddings)
 
     def get_similarity(row):
         # use unsqueeze because cosine_similarity expects two 2d tensors
@@ -37,13 +38,18 @@ def search(query: str):
     return doc_results
 
 def cli():
-    vectors.get_vecs()
+    models.vectors.get_vecs()
 
-    query = input("Enter a query: ")
+    query = input("Enter a query (or blank to quit): ")
+
+    if not query:
+        print('Goodbye!')
+        return
 
     results = search(query)
 
-    print(results)
+    for result in results:
+        print(f"- {result}")
 
     cli()
 

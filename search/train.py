@@ -10,27 +10,19 @@ import os
 import wandb
 import sklearn
 
-from models import two_towers
+import models
+import models.doc_projector, models.query_projector, models.doc_embedder, models.query_embedder, models.vectors
 from util import devices, artifacts, mini, constants
 
 dirname = os.path.dirname(__file__)
 
-from models import doc_embedder, query_embedder, two_towers, vectors
-
 BATCH_SIZE = 64
 
 EPOCHS = 100
+LEARNING_RATE = 0.0002
+MARGIN = 0.2
 
 torch.manual_seed(16)
-
-class Doc(TypedDict):
-    doc_text: str
-    doc_ref: str
-
-class TrainingRow(TypedDict):
-    query: str
-    relevant_doc: Doc
-    non_relevant_doc: Doc
 
 def calc_distance(query, document):
     return 1 - torch.nn.functional.cosine_similarity(query, document)
@@ -39,15 +31,15 @@ def get_irrelevant_doc_embedding(row, all_rows):
     for i in range(0, 100):
         other_row = all_rows.sample(1).iloc[0]
         if (other_row['query'] != row['query']) and (other_row['doc_ref'] != row['doc_ref']):
-            return doc_embedder.get_embeddings_for_doc(other_row['doc_text'])
+            return models.doc_embedder.get_embeddings_for_doc(other_row['doc_text'])
     raise ValueError("No non-relevant result found in random 100 row sample. Weird.")
 
 def train():
     wandb.init(project='search', name='search-mini' if mini.is_mini() else 'search')
     wandb.config = {
-        "learning_rate": two_towers.LEARNING_RATE,
-        "query_hidden_layer_dimensions": two_towers.QUERY_HIDDEN_LAYER_DIMENSIONS,
-        "doc_hidden_layer_dimensions": two_towers.DOC_HIDDEN_LAYER_DIMENSIONS,
+        "learning_rate": LEARNING_RATE,
+        "query_hidden_layer_dimensions": models.query_projector.QUERY_HIDDEN_LAYER_DIMENSIONS,
+        "doc_hidden_layer_dimensions": models.doc_projector.DOC_HIDDEN_LAYER_DIMENSIONS,
         "batch_size": BATCH_SIZE,
         "epochs": EPOCHS
     }
@@ -58,15 +50,19 @@ def train():
 
     train, val = sklearn.model_selection.train_test_split(data, test_size=0.2, random_state=16)
 
-    model = two_towers.Model().to(device)
+    query_projector = models.query_projector.Model().to(device)
+    doc_projector = models.doc_projector.Model().to(device)
 
-    calc_loss = torch.nn.TripletMarginWithDistanceLoss(margin=two_towers.MARGIN, distance_function=calc_distance)
-    optimizer = torch.optim.Adam(model.parameters(), lr=two_towers.LEARNING_RATE)
+    calc_loss = torch.nn.TripletMarginWithDistanceLoss(margin=MARGIN, distance_function=calc_distance)
+
+    all_params = list(query_projector.parameters()) + list(doc_projector.parameters())
+    optimizer = torch.optim.AdamW(all_params, lr=LEARNING_RATE)
 
     best_val_loss = float('inf')
-    best_state_dict = None
+    best_query_state_dict = None
+    best_doc_state_dict = None
     
-    vectors.get_vecs()
+    models.vectors.get_vecs()
 
     train_batches = np.array_split(train, len(train) // BATCH_SIZE)
     val_batches = np.array_split(val, len(val) // BATCH_SIZE)
@@ -74,10 +70,10 @@ def train():
         print('=====')
         train_loss = 0.0
         for batch in tqdm.tqdm(train_batches, desc=f"Epoch {epoch+1}", leave=False):
-            query_embeddings = batch['query'].swifter.progress_bar(False).apply(query_embedder.get_embeddings_for_query)
+            query_embeddings = batch['query'].swifter.progress_bar(False).apply(models.query_embedder.get_embeddings_for_query)
             query_embeddings = torch.tensor(np.vstack(query_embeddings.values)).to(device)
 
-            relevant_doc_embeddings = batch['doc_text'].swifter.progress_bar(False).apply(doc_embedder.get_embeddings_for_doc)
+            relevant_doc_embeddings = batch['doc_text'].swifter.progress_bar(False).apply(models.doc_embedder.get_embeddings_for_doc)
             relevant_doc_embeddings = torch.tensor(np.vstack(relevant_doc_embeddings.values)).to(device)
 
             irrelevant_doc_embeddings = batch.apply(lambda row: get_irrelevant_doc_embedding(row, train), axis=1)
@@ -85,9 +81,9 @@ def train():
 
             optimizer.zero_grad()
 
-            query_outputs = model.encode_query(query_embeddings)
-            relevant_doc_outputs = model.encode_doc(relevant_doc_embeddings)
-            irrelevant_doc_outputs = model.encode_doc(irrelevant_doc_embeddings)
+            query_outputs = query_projector(query_embeddings)
+            relevant_doc_outputs = doc_projector(relevant_doc_embeddings)
+            irrelevant_doc_outputs = doc_projector(irrelevant_doc_embeddings)
 
             loss = calc_loss(query_outputs, relevant_doc_outputs, irrelevant_doc_outputs)
 
@@ -99,23 +95,24 @@ def train():
         print('Train loss', train_loss / len(train))
         print('Calculating val loss...')
 
-        model.eval()
+        query_projector.eval()
+        doc_projector.eval()
         val_loss = 0.0
         
         with torch.no_grad():
             for batch in val_batches:
-                query_embeddings = batch['query'].swifter.progress_bar(False).apply(query_embedder.get_embeddings_for_query)
+                query_embeddings = batch['query'].swifter.progress_bar(False).apply(models.query_embedder.get_embeddings_for_query)
                 query_embeddings = torch.tensor(np.vstack(query_embeddings.values)).to(device)
 
-                relevant_doc_embeddings = batch['doc_text'].swifter.progress_bar(False).apply(doc_embedder.get_embeddings_for_doc)
+                relevant_doc_embeddings = batch['doc_text'].swifter.progress_bar(False).apply(models.doc_embedder.get_embeddings_for_doc)
                 relevant_doc_embeddings = torch.tensor(np.vstack(relevant_doc_embeddings.values)).to(device)
 
                 irrelevant_doc_embeddings = batch.apply(lambda row: get_irrelevant_doc_embedding(row, train), axis=1)
                 irrelevant_doc_embeddings = torch.tensor(np.vstack(irrelevant_doc_embeddings.values)).to(device)
 
-                query_outputs = model.encode_query(query_embeddings)
-                relevant_doc_outputs = model.encode_doc(relevant_doc_embeddings)
-                irrelevant_doc_outputs = model.encode_doc(irrelevant_doc_embeddings)
+                query_outputs = query_projector(query_embeddings)
+                relevant_doc_outputs = doc_projector(relevant_doc_embeddings)
+                irrelevant_doc_outputs = doc_projector(irrelevant_doc_embeddings)
 
                 loss = calc_loss(query_outputs, relevant_doc_outputs, irrelevant_doc_outputs)
 
@@ -127,11 +124,16 @@ def train():
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_state_dict = model.state_dict()
+            best_query_state_dict = query_projector.state_dict()
+            best_doc_state_dict = doc_projector.state_dict()
 
-    model_save_path = os.path.join(dirname, 'data/two-towers-weights.generated.pt')
-    torch.save(best_state_dict, model_save_path)
-    artifacts.store_artifact('two-towers-weights', 'model', model_save_path)
+    query_model_save_path = os.path.join(dirname, 'data/query-projector-weights.generated.pt')
+    torch.save(best_query_state_dict, query_model_save_path)
+    artifacts.store_artifact('query-projector-weights', 'model', query_model_save_path)
+
+    doc_model_save_path = os.path.join(dirname, 'data/doc-projector-weights.generated.pt')
+    torch.save(best_doc_state_dict, doc_model_save_path)
+    artifacts.store_artifact('doc-projector-weights', 'model', doc_model_save_path)
 
     wandb.finish()
 
