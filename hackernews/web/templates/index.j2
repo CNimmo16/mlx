@@ -11,7 +11,8 @@
     <h2>Enter post details</h2>
 
     <form method="POST" action="/predict">
-        <input type="text" name="post_title" placeholder="Post title" value="{{ post_title }}" style="width: 400px">
+        <input type="text" name="post_title" placeholder="Post title" value="{{ post_title }}">
+        <input type="text" name="karma" placeholder="User karma" value="{{ karma }}">
         <button type="submit">Go</button>
     </form>
 

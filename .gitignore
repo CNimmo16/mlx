@@ -3,3 +3,6 @@ wandb/
 .DS_Store
 *.generated*
 .env
+requirements.txt
+.venv/
+.pdm-python
