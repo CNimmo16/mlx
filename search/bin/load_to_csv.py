@@ -5,7 +5,7 @@ import swifter
 
 dirname = os.path.dirname(__file__)
 
-def expand_passages(row) -> hf_datasets.Dataset:
+def _expand_passages(row) -> hf_datasets.Dataset:
     queries = []
     doc_refs = []
     doc_texts = []
@@ -30,7 +30,7 @@ def run():
 
     print('Expanding passages...')
 
-    df = pd.concat(df.swifter.apply(expand_passages, axis=1).tolist(), ignore_index=True)
+    df = pd.concat(df.swifter.apply(_expand_passages, axis=1).tolist(), ignore_index=True)
 
     print('Writing to file...')
 

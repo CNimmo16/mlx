@@ -36,21 +36,3 @@ def search(query: str):
     doc_results = [doc for (doc, similarity) in similarities[:MAX_RESULTS]]
 
     return doc_results
-
-def cli():
-    models.vectors.get_vecs()
-
-    query = input("Enter a query (or blank to quit): ")
-
-    if not query:
-        print('Goodbye!')
-        return
-
-    results = search(query)
-
-    for result in results:
-        print(f"- {result}")
-
-    cli()
-
-cli()
