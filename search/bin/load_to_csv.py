@@ -26,7 +26,14 @@ def _expand_passages(row) -> hf_datasets.Dataset:
 def run():
     print('Loading dataset...')
 
-    df = hf_datasets.load_dataset("microsoft/ms_marco", "v1.1", split="train").to_pandas()
+    splits = hf_datasets.load_dataset("microsoft/ms_marco", "v1.1")
+
+    all_data = []
+    for split in splits:
+        rows = splits[split].to_list()
+        all_data.extend(rows)
+        
+    df = pd.DataFrame(all_data)
 
     print('Expanding passages...')
 
@@ -36,8 +43,8 @@ def run():
 
     df.head()
 
-    df.to_csv(os.path.join(dirname, "./data/results.generated.csv"), index=False)
-    df[0:1000].to_csv(os.path.join(dirname, "./data/results-mini.generated.csv"), index=False)
+    df.to_csv(os.path.join(dirname, "../data/results.generated.csv"), index=False)
+    df[0:1000].to_csv(os.path.join(dirname, "../data/results-mini.generated.csv"), index=False)
 
     print('Done!')
 

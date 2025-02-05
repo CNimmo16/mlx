@@ -47,46 +47,24 @@ class TwoTowerDataset(torch.utils.data.Dataset):
         
         return chunk.iloc[idx_in_chunk]
 
+def get_padded(batch: list, field: str):
+    embeddings = [torch.tensor(item[field]).to(device) for item in batch]
+
+    padded_query_embeddings = torch.nn.utils.rnn.pad_sequence(embeddings, batch_first=True, padding_value=0).float()
+    query_embedding_lengths = torch.tensor([len(x) for x in embeddings])
+
+    return padded_query_embeddings, query_embedding_lengths    
+
 def collate_two_tower_batch(batch: list):
-    query_embeddings = np.array([item['query_embeddings'] for item in batch])
-    relevant_doc_embeddings = np.array([item['relevant_doc_embeddings'] for item in batch])
-    irrelevant_doc_embeddings = np.array([item['irrelevant_doc_embeddings'] for item in batch])
+    query_embeddings, query_embedding_lengths = get_padded(batch, 'query_embeddings')
+    relevant_doc_embeddings, relevant_doc_embedding_lengths = get_padded(batch, 'relevant_doc_embeddings')
+    irrelevant_doc_embeddings, irrelevant_doc_embedding_lengths = get_padded(batch, 'irrelevant_doc_embeddings')
 
     return {
-        'query_embeddings': torch.tensor(query_embeddings).to(device),
-        'relevant_doc_embeddings': torch.tensor(relevant_doc_embeddings).to(device),
-        'irrelevant_doc_embeddings': torch.tensor(irrelevant_doc_embeddings).to(device)
-    }
-    
-    # Tokenize all texts
-    query_tokens = [tokenizer.tokenize(q) for q in queries]
-    pos_tokens = [tokenizer.tokenize(p) for p in positives]
-    neg_tokens = [tokenizer.tokenize(n) for n in negatives]
-    
-    # Get max lengths
-    max_query_len = max(len(t) for t in query_tokens)
-    max_pos_len = max(len(t) for t in pos_tokens)
-    max_neg_len = max(len(t) for t in neg_tokens)
-    
-    # Pad sequences
-    pad_id = tokenizer.special_tokens['<PAD>']
-    
-    padded_queries = [
-        t + [pad_id] * (max_query_len - len(t)) for t in query_tokens
-    ]
-    padded_positives = [
-        t + [pad_id] * (max_pos_len - len(t)) for t in pos_tokens
-    ]
-    padded_negatives = [
-        t + [pad_id] * (max_neg_len - len(t)) for t in neg_tokens
-    ]
-    
-    # Convert to tensors
-    return {
-        'query_ids': torch.tensor(padded_queries),
-        'query_lengths': torch.tensor([len(t) for t in query_tokens]),
-        'positive_ids': torch.tensor(padded_positives),
-        'positive_lengths': torch.tensor([len(t) for t in pos_tokens]),
-        'negative_ids': torch.tensor(padded_negatives),
-        'negative_lengths': torch.tensor([len(t) for t in neg_tokens])
+        'query_embeddings': query_embeddings,
+        'query_embedding_lengths': query_embedding_lengths,
+        'relevant_doc_embeddings': relevant_doc_embeddings,
+        'relevant_doc_embedding_lengths': relevant_doc_embedding_lengths,
+        'irrelevant_doc_embeddings': irrelevant_doc_embeddings,
+        'irrelevant_doc_embedding_lengths': irrelevant_doc_embedding_lengths
     }
