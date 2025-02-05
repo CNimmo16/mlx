@@ -2,6 +2,8 @@ import nltk
 import numpy as np
 from models import vectors
 
+nltk.download('punkt_tab')
+
 EMBEDDING_DIM = 300
 
 def get_embeddings_for_doc(doc: str) -> list:
