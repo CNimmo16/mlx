@@ -22,10 +22,8 @@ class Model(torch.nn.Module):
     def forward(self, doc_embeddings: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
         max_len = torch.max(lengths).item()
         expected_shape = [max_len, doc_embedder.EMBEDDING_DIM]
-        try:
-            assert(list(doc_embeddings.shape)[1:] == expected_shape)
-        except:
-            raise ValueError(f"Embedding shape [?, {list(doc_embeddings.shape)}] did not match expected shape [?, {expected_shape}]")
+        if list(doc_embeddings.shape)[1:] != expected_shape:
+            raise ValueError(f"Embedding shape {list(doc_embeddings.shape)} did not match expected shape [<batch size (any)>, {', '.join([str(x) for x in expected_shape])}]")
 
         # Pack padded input
         packed_x = torch.nn.utils.rnn.pack_padded_sequence(doc_embeddings, lengths, batch_first=True, enforce_sorted=False)

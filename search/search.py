@@ -1,14 +1,17 @@
 import pandas as pd
 import torch
 
-from util import artifacts, constants, cache
+from util import artifacts, constants, chroma, devices
 import models
+import dataset
 import models.query_embedder, models.query_projector, models.vectors
 
 MAX_RESULTS = 5
 
+device = devices.get_device()
+
 def search(query: str):
-    query_projector = models.query_projector.Model()
+    query_projector = models.query_projector.Model().to(device)
 
     query_state_dict = artifacts.load_artifact('query-projector-weights', 'model')
 
@@ -18,21 +21,21 @@ def search(query: str):
     rows = pd.read_csv(constants.RESULTS_PATH)
 
     query_embeddings = models.query_embedder.get_embeddings_for_query(query)
-    query_embeddings = torch.tensor(query_embeddings)
 
-    encoded_query = query_projector(query_embeddings)
+    batch = [query_embeddings]
 
-    def get_similarity(row):
-        # use unsqueeze because cosine_similarity expects two 2d tensors
-        encoded_doc = cache.vectors.get(f"encoded_docs:{row['doc_ref']}")
-        doc_2d = torch.tensor(encoded_doc).unsqueeze(0)
-        query_2d = encoded_query.unsqueeze(0)
-        similarity = torch.nn.functional.cosine_similarity(doc_2d, query_2d).item()
-        return (row['doc_ref'], similarity)
+    padded_embeddings, lengths = dataset.pad_batch_values(batch)
 
-    similarities = rows.apply(get_similarity, axis=1).tolist()
-    similarities.sort(reverse=True, key=lambda x: x[1])
+    encoded_query_batch, _ = query_projector(padded_embeddings, lengths)
+    
+    encoded_query_batch_list = encoded_query_batch.detach().tolist()
 
-    doc_results = [doc for (doc, similarity) in similarities[:MAX_RESULTS]]
+    collection = chroma.client.get_collection(name="docs")
+    nearest_docs = collection.query(
+        query_embeddings=encoded_query_batch_list,
+        n_results=5,
+    )
+    nearest_doc_refs = nearest_docs['ids'][0]
+    nearest_docs = [rows[rows['doc_ref'] == id].iloc[0].to_dict() for id in nearest_doc_refs]
 
-    return doc_results
+    return nearest_docs

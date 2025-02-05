@@ -1,6 +1,7 @@
 import torch
 import pandas as pd
 import numpy as np
+import swifter
 
 import models
 import models.query_embedder, models.doc_embedder
@@ -47,18 +48,26 @@ class TwoTowerDataset(torch.utils.data.Dataset):
         
         return chunk.iloc[idx_in_chunk]
 
-def get_padded(batch: list, field: str):
-    embeddings = [torch.tensor(np.array(item[field])).to(device) for item in batch]
+def pad_batch_values(values: list):
+    if type(values) is not list:
+        raise ValueError("Input values must be a list (batches)")
+    if type(values[0]) is not list:
+        raise ValueError(f"Input values must be a list (batches) of lists (tokens in batch), got type {type(values[0])} at values[0]")
+    if type(values[0][0]) is not np.ndarray:
+        raise ValueError(f"Input values must be a list (batches) of lists (tokens in batch) of numpy arrays (token embeddings), got {type(values[0][0])} at values[0][0]")
+    if values[0][0].dtype is not np.dtype('float32'):
+        raise ValueError(f"Input values must be a list (batches) of lists (tokens in batch) of numpy arrays of dtype float32 (token embeddings), got dtype {type(values[0][0].dtype)}")
+    tensors = [torch.tensor(np.array(item)).to(device) for item in values]
 
-    padded_query_embeddings = torch.nn.utils.rnn.pad_sequence(embeddings, batch_first=True, padding_value=0).float()
-    query_embedding_lengths = torch.tensor([len(x) for x in embeddings])
+    padded_values = torch.nn.utils.rnn.pad_sequence(tensors, batch_first=True, padding_value=0).float()
+    original_lengths = torch.tensor([len(x) for x in values])
 
-    return padded_query_embeddings, query_embedding_lengths    
+    return padded_values, original_lengths
 
 def collate_two_tower_batch(batch: list):
-    query_embeddings, query_embedding_lengths = get_padded(batch, 'query_embeddings')
-    relevant_doc_embeddings, relevant_doc_embedding_lengths = get_padded(batch, 'relevant_doc_embeddings')
-    irrelevant_doc_embeddings, irrelevant_doc_embedding_lengths = get_padded(batch, 'irrelevant_doc_embeddings')
+    query_embeddings, query_embedding_lengths = pad_batch_values([item['query_embeddings'] for item in batch])
+    relevant_doc_embeddings, relevant_doc_embedding_lengths = pad_batch_values([item['relevant_doc_embeddings'] for item in batch])
+    irrelevant_doc_embeddings, irrelevant_doc_embedding_lengths = pad_batch_values([item['irrelevant_doc_embeddings'] for item in batch])
 
     return {
         'query_embeddings': query_embeddings,

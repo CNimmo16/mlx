@@ -23,7 +23,7 @@ def cli():
     results = search(query)
 
     for result in results:
-        print(f"- {result}")
+        print(f"- {result['doc_ref']}")
 
     cli()
 
