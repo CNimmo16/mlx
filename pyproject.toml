@@ -7,7 +7,7 @@ authors = [
     {name = "", email = "48329714+CNimmo16@users.noreply.github.com"},
 ]
 readme = "README.md"
-requires-python = "==3.9.*"
+requires-python = ">=3.9.*"
 dependencies = [
     "pandas (>=2.2.3,<3.0.0)",
     "torch (>=2.6.0,<3.0.0)",
