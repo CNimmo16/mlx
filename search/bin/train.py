@@ -67,7 +67,6 @@ def train():
     models.vectors.get_vecs()
 
     for epoch in range(EPOCHS):
-        print('=====')
         query_projector.train()
         doc_projector.train()
 
@@ -86,9 +85,8 @@ def train():
             optimizer.step()
 
             train_loss += loss.item()
-
-        print('Train loss', train_loss / len(train))
-        print('Calculating val loss...')
+        
+        train_loss = train_loss / len(train)
 
         query_projector.eval()
         doc_projector.eval()
@@ -103,8 +101,10 @@ def train():
                 loss = calc_loss(query_outputs, relevant_doc_outputs, irrelevant_doc_outputs)
 
                 val_loss += loss.item()
+                
+        val_loss = val_loss / len(val)
 
-        print('Val loss', val_loss / len(val))
+        print(f"Epoch {epoch + 1}, train loss: {train_loss}, val loss: {val_loss}")
 
         wandb.log({ 'epoch': epoch + 1, 'train-loss': train_loss, 'val_loss': val_loss })
 

@@ -48,7 +48,7 @@ class TwoTowerDataset(torch.utils.data.Dataset):
         return chunk.iloc[idx_in_chunk]
 
 def get_padded(batch: list, field: str):
-    embeddings = [torch.tensor(item[field]).to(device) for item in batch]
+    embeddings = [torch.tensor(np.array(item[field])).to(device) for item in batch]
 
     padded_query_embeddings = torch.nn.utils.rnn.pad_sequence(embeddings, batch_first=True, padding_value=0).float()
     query_embedding_lengths = torch.tensor([len(x) for x in embeddings])
