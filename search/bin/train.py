@@ -120,6 +120,7 @@ def train():
 
         if val_loss_failed_to_improve_for_epochs == EARLY_STOP_AFTER:
             print(f"Validation loss failed to improve for {EARLY_STOP_AFTER} epochs. Early stopping now.")
+            break
 
     query_model_save_path = os.path.join(dirname, '../data/query-projector-weights.generated.pt')
     torch.save(best_query_state_dict, query_model_save_path)
