@@ -7,7 +7,7 @@ import models
 import models.query_embedder, models.doc_embedder
 from util import devices
 
-CHUNK_SIZE = 10
+CHUNK_SIZE = 1000
 
 device = devices.get_device()
 
