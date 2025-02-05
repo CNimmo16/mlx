@@ -27,6 +27,7 @@ EPOCHS = 100
 LEARNING_RATE = 0.0002
 MARGIN = 0.2
 BATCH_SIZE = 64
+EARLY_STOP_AFTER = 5
 
 torch.manual_seed(16)
 
@@ -60,6 +61,7 @@ def train():
     all_params = list(query_projector.parameters()) + list(doc_projector.parameters())
     optimizer = torch.optim.AdamW(all_params, lr=LEARNING_RATE)
 
+    val_loss_failed_to_improve_for_epochs = 0
     best_val_loss = float('inf')
     best_query_state_dict = None
     best_doc_state_dict = None
@@ -112,6 +114,12 @@ def train():
             best_val_loss = val_loss
             best_query_state_dict = query_projector.state_dict()
             best_doc_state_dict = doc_projector.state_dict()
+            val_loss_failed_to_improve_for_epochs = 0
+        else:
+            val_loss_failed_to_improve_for_epochs += 1
+
+        if val_loss_failed_to_improve_for_epochs == EARLY_STOP_AFTER:
+            print(f"Validation loss failed to improve for {EARLY_STOP_AFTER} epochs. Early stopping now.")
 
     query_model_save_path = os.path.join(dirname, '../data/query-projector-weights.generated.pt')
     torch.save(best_query_state_dict, query_model_save_path)
