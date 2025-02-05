@@ -45,6 +45,8 @@ def train():
 
     data = pd.read_csv(constants.RESULTS_PATH)
 
+    data = data[data['is_selected'] == 1]
+
     train, val = sklearn.model_selection.train_test_split(data, test_size=0.2, random_state=16)
 
     train.reset_index(drop=True, inplace=True)

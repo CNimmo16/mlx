@@ -7,7 +7,7 @@ import models
 import models.query_embedder, models.doc_embedder
 from util import devices
 
-CHUNK_SIZE = 1000
+CHUNK_SIZE = 10000
 
 device = devices.get_device()
 
@@ -35,8 +35,10 @@ class TwoTowerDataset(torch.utils.data.Dataset):
     
     def __get_chunk(self, chunk_idx: int):
         if chunk_idx not in self.prepped:
+            print('Preloading data chunk...', chunk_idx)
             rows = self.data[chunk_idx * CHUNK_SIZE:(chunk_idx + 1) * CHUNK_SIZE]
-            self.prepped[chunk_idx] = rows.swifter.progress_bar(False).apply(self.__prepare_row, axis=1)
+            self.prepped[chunk_idx] = rows.swifter.apply(self.__prepare_row, axis=1)
+            print('> Done')
         return self.prepped[chunk_idx]
 
     def __getitem__(self, idx: int) -> dict[str, str]:
