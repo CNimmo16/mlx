@@ -90,7 +90,7 @@ def train():
 
             train_loss += loss.item()
         
-        train_loss = train_loss / len(train)
+        train_loss = train_loss / len(train_loader)
 
         query_projector.eval()
         doc_projector.eval()
@@ -106,7 +106,7 @@ def train():
 
                 val_loss += loss.item()
                 
-        val_loss = val_loss / len(val)
+        val_loss = val_loss / len(val_loader)
 
         print(f"Epoch {epoch + 1}, train loss: {train_loss}, val loss: {val_loss}")
 

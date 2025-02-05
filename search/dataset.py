@@ -35,7 +35,7 @@ class TwoTowerDataset(torch.utils.data.Dataset):
     
     def __get_chunk(self, chunk_idx: int):
         if chunk_idx not in self.prepped:
-            print('Preloading data chunk...', chunk_idx)
+            print(f"Preloading data chunk {chunk_idx}...")
             rows = self.data[chunk_idx * CHUNK_SIZE:(chunk_idx + 1) * CHUNK_SIZE]
             self.prepped[chunk_idx] = rows.swifter.apply(self.__prepare_row, axis=1)
             print('> Done')
