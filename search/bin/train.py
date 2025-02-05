@@ -68,6 +68,9 @@ def train():
 
     for epoch in range(EPOCHS):
         print('=====')
+        query_projector.train()
+        doc_projector.train()
+
         train_loss = 0.0
         for batch in tqdm.tqdm(train_loader, desc=f"Epoch {epoch+1}", leave=False):
 
