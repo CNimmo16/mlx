@@ -10,15 +10,32 @@ MAX_RESULTS = 5
 
 device = devices.get_device()
 
+query_projector = None
+rows = None
+
+def load_model_and_rows():
+    global query_projector, rows
+    if query_projector is None or rows is None:
+        query_projector = models.query_projector.Model().to(device)
+
+        query_state_dict = artifacts.load_artifact('query-projector-weights', 'model')
+
+        query_projector.load_state_dict(query_state_dict)
+        query_projector.eval()
+
+        rows = pd.read_csv(constants.RESULTS_PATH)
+
+    return query_projector, rows
+
+def get_random_query():
+    query_projector, rows = load_model_and_rows()
+
+    query = rows.sample(1).iloc[0]['query']
+
+    return query
+
 def search(query: str):
-    query_projector = models.query_projector.Model().to(device)
-
-    query_state_dict = artifacts.load_artifact('query-projector-weights', 'model')
-
-    query_projector.load_state_dict(query_state_dict)
-    query_projector.eval()
-
-    rows = pd.read_csv(constants.RESULTS_PATH)
+    query_projector, rows = load_model_and_rows()
 
     query_embeddings = models.query_embedder.get_embeddings_for_query(query)
 

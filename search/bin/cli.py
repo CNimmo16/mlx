@@ -9,7 +9,7 @@ if src_path not in sys.path:
 
 import models
 import models.query_embedder, models.query_projector, models.vectors
-from search import search
+import inference
 
 def cli():
     models.vectors.get_vecs()
@@ -20,7 +20,7 @@ def cli():
         print('Goodbye!')
         return
 
-    results = search(query)
+    results = inference.search(query)
 
     for result in results:
         print(f"- {result['doc_ref']}")
