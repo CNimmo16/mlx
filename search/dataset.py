@@ -64,8 +64,6 @@ class TwoTowerDataset(torch.utils.data.Dataset):
         chunk = self.__get_chunk(chunk_idx)
 
         idx_in_chunk = idx % CHUNK_SIZE
-
-        print('getting idx', idx, 'which is idx', idx_in_chunk, 'in chunk', chunk_idx, 'out of', chunk.size)
         
         return chunk.iloc[idx_in_chunk]
 
