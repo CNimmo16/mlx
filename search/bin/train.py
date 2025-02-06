@@ -119,7 +119,7 @@ def train():
             best_doc_state_dict = doc_projector.state_dict()
             val_loss_failed_to_improve_for_epochs = 0
 
-            Path("../data/epoch-weights").mkdir(exist_ok=True)
+            Path(os.path.join(dirname, "../data/epoch-weights")).mkdir(exist_ok=True)
             torch.save(best_query_state_dict, os.path.join(dirname, f"../data/epoch-weights/query-projector-weights_epoch-{epoch+1}.generated.pt"))
             torch.save(best_doc_state_dict, os.path.join(dirname, f"../data/epoch-weights/doc-projector-weights_epoch-{epoch+1}.generated.pt"))
         else:
