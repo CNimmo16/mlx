@@ -3,7 +3,9 @@
 open_remote () {
     read -p "Enter an ip to connect to: " ip
     read -p "Enter a port: " port
-    read -p "Enter a repo url to clone: " repo_url
+    read -p "Enter a repo to clone: " repo_ref
+
+    repo_url="https://github.com/$repo_ref"
 
     repo_name=$(basename "$repo_url")
 

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/opt/homebrew/bin/python3 -m ansible playbook -i inventory.ini playbook.yml -u cnimmo
