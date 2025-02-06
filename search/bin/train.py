@@ -27,7 +27,7 @@ EPOCHS = 100
 LEARNING_RATE = 0.0002
 MARGIN = 0.2
 BATCH_SIZE = 64
-EARLY_STOP_AFTER = 10
+EARLY_STOP_AFTER = 3
 
 torch.manual_seed(16)
 
@@ -43,7 +43,7 @@ def train():
 
     device = devices.get_device()
 
-    data = pd.read_csv(constants.TRAINING_DATA_PATH, nrows=100 if mini.is_mini() else None)
+    data = pd.read_csv(constants.TRAINING_DATA_PATH, nrows=1000 if mini.is_mini() else None)
 
     data = data[data['is_selected'] == 1]
 
