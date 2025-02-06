@@ -1,5 +1,0 @@
-#!/bin/bash
-
-pdm export --no-hashes --format=requirements --output requirements.txt
-
-docker build --platform=linux/amd64 -t cameronnimmo/mlx

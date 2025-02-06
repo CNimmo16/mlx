@@ -1,4 +1,4 @@
-FROM python:3.11
+FROM python:3.11-slim-bullseye
 
 WORKDIR /code
 
@@ -10,4 +10,4 @@ COPY . /code
 
 EXPOSE 8000
 
-CMD ["python", "hackernews/server.py"]
+CMD ["python", "server.py"]
