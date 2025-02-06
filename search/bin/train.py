@@ -6,7 +6,8 @@ dirname = os.path.dirname(__file__)
 src_path = os.path.abspath(os.path.join(dirname, '..'))
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
-    
+
+from pathlib import Path
 import pandas as pd
 import sklearn.model_selection
 import sklearn.preprocessing
@@ -117,6 +118,10 @@ def train():
             best_query_state_dict = query_projector.state_dict()
             best_doc_state_dict = doc_projector.state_dict()
             val_loss_failed_to_improve_for_epochs = 0
+
+            Path("../data/epoch-weights").mkdir(exist_ok=True)
+            torch.save(best_query_state_dict, os.path.join(dirname, f"../data/epoch-weights/query-projector-weights_epoch-{epoch+1}.generated.pt"))
+            torch.save(best_doc_state_dict, os.path.join(dirname, f"../data/epoch-weights/doc-projector-weights_epoch-{epoch+1}.generated.pt"))
         else:
             val_loss_failed_to_improve_for_epochs += 1
 

@@ -3,7 +3,6 @@ import numpy as np
 import random
 
 from util import mini
-from models import query_embedder
 
 word_vectors = None
 
