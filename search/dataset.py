@@ -8,7 +8,7 @@ import os
 
 import models
 import models.query_embedder, models.doc_embedder
-from util import devices
+from util import devices, mini
 
 dirname = os.path.dirname(__file__)
 
@@ -43,6 +43,8 @@ class TwoTowerDataset(torch.utils.data.Dataset):
             Path(os.path.join(dirname, './data/chunks')).mkdir(parents=True, exist_ok=True)
             chunk_filepath = os.path.join(dirname, f"./data/chunks/chunk-{chunk_idx}.generated.pt")
             try:
+                if mini.is_mini():
+                    raise FileNotFoundError('CACHE MISS: Mini mode, not loading')
                 chunk = joblib.load(chunk_filepath)
                 print('CACHE HIT: Got existing chunk from file...')
                 self.prepped[chunk_idx] = chunk
