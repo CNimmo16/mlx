@@ -4,7 +4,7 @@ from models import vectors
 
 nltk.download('punkt_tab')
 
-EMBEDDING_DIM = 300
+EMBEDDING_DIM = vectors.EMBEDDING_DIM
 
 def get_embeddings_for_doc(doc: str) -> list:
     word_vectors = vectors.get_vecs()

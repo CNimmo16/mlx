@@ -7,8 +7,10 @@ from models import query_embedder
 
 word_vectors = None
 
+EMBEDDING_DIM = 50
+
 def get_random_vec():
-    return np.float32(np.random.random(size=query_embedder.EMBEDDING_DIM))
+    return np.float32(np.random.random(size=EMBEDDING_DIM))
 
 def get_vecs():
     global word_vectors
@@ -23,7 +25,7 @@ def get_vecs():
 
     if not word_vectors:
         print("Downloading word vectors...")
-        word_vectors = gensim.downloader.load('word2vec-google-news-300')
+        word_vectors = gensim.downloader.load('glove-twitter-50')
         word_vectors["<UNK>"] = get_random_vec()
         print("Done")
     return word_vectors
