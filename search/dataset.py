@@ -2,10 +2,15 @@ import torch
 import pandas as pd
 import numpy as np
 import swifter
+import joblib
+from pathlib import Path
+import os
 
 import models
 import models.query_embedder, models.doc_embedder
 from util import devices
+
+dirname = os.path.dirname(__file__)
 
 CHUNK_SIZE = 10000
 
@@ -35,10 +40,20 @@ class TwoTowerDataset(torch.utils.data.Dataset):
     
     def __get_chunk(self, chunk_idx: int):
         if chunk_idx not in self.prepped:
-            print(f"Preloading data chunk {chunk_idx}...")
-            rows = self.data[chunk_idx * CHUNK_SIZE:(chunk_idx + 1) * CHUNK_SIZE]
-            self.prepped[chunk_idx] = rows.swifter.apply(self.__prepare_row, axis=1)
-            print('> Done')
+            Path(os.path.join(dirname, './data/chunks')).mkdir(parents=True, exist_ok=True)
+            chunk_filepath = os.path.join(dirname, f"./data/chunks/chunk-{chunk_idx}.generated.pt")
+            try:
+                chunk = joblib.load(chunk_filepath)
+                print('CACHE HIT: Got existing chunk from file...')
+                self.prepped[chunk_idx] = chunk
+                return chunk
+            except:
+                print(f"Preloading data chunk {chunk_idx}...")
+                rows = self.data[chunk_idx * CHUNK_SIZE:(chunk_idx + 1) * CHUNK_SIZE]
+                chunk = rows.swifter.apply(self.__prepare_row, axis=1)
+                self.prepped[chunk_idx] = chunk
+                joblib.dump(chunk, chunk_filepath)
+                print('> Done')
         return self.prepped[chunk_idx]
 
     def __getitem__(self, idx: int) -> dict[str, str]:
@@ -57,7 +72,7 @@ def pad_batch_values(values: list):
         raise ValueError(f"Input values must be a list (batches) of lists (tokens in batch), got type {type(values[0])} at values[0]")
     if type(values[0][0]) is not np.ndarray:
         raise ValueError(f"Input values must be a list (batches) of lists (tokens in batch) of numpy arrays (token embeddings), got {type(values[0][0])} at values[0][0]")
-    if values[0][0].dtype is not np.dtype('float32'):
+    if not isinstance(values[0][0], np.ndarray) or values[0][0].dtype != np.float32:
         raise ValueError(f"Input values must be a list (batches) of lists (tokens in batch) of numpy arrays of dtype float32 (token embeddings), got dtype {type(values[0][0].dtype)}")
     tensors = [torch.tensor(np.array(item)).to(device) for item in values]
 

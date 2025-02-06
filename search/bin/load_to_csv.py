@@ -1,7 +1,19 @@
+import os
+import sys
+
+dirname = os.path.dirname(__file__)
+
+src_path = os.path.abspath(os.path.join(dirname, '..'))
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
 import datasets as hf_datasets
 import pandas as pd
-import os
 import swifter
+
+from util import constants
+import models
+import models.doc_embedder, models.query_embedder
 
 dirname = os.path.dirname(__file__)
 
@@ -33,18 +45,29 @@ def run():
         rows = splits[split].to_list()
         all_data.extend(rows)
         
-    df = pd.DataFrame(all_data)
+    marco = pd.DataFrame(all_data)
 
     print('Expanding passages...')
 
-    df = pd.concat(df.swifter.apply(_expand_passages, axis=1).tolist(), ignore_index=True)
+    marco = pd.concat(marco.swifter.apply(_expand_passages, axis=1).tolist(), ignore_index=True)
 
-    print('Writing to file...')
+    print('Writing docs to file...')
 
-    df.head()
+    docs = marco[['doc_ref', 'doc_text']]
 
-    df.to_csv(os.path.join(dirname, "../data/results.generated.csv"), index=False)
-    df[0:1000].to_csv(os.path.join(dirname, "../data/results-mini.generated.csv"), index=False)
+    docs = docs.drop_duplicates(subset=['doc_ref'])
+
+    docs.to_csv(constants.DOCS_PATH, index=False)
+
+    sample_queries = marco[['query']]
+
+    sample_queries = sample_queries.drop_duplicates(subset=['query'])
+
+    sample_queries = sample_queries.sample(1000)
+
+    sample_queries.to_csv(constants.SAMPLE_QUERIES_PATH, index=False)
+
+    marco.to_csv(constants.TRAINING_DATA_PATH, index=False)
 
     print('Done!')
 

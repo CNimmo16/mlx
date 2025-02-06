@@ -43,7 +43,7 @@ def train():
 
     device = devices.get_device()
 
-    data = pd.read_csv(constants.RESULTS_PATH)
+    data = pd.read_csv(constants.TRAINING_DATA_PATH, nrows=100 if mini.is_mini() else None)
 
     data = data[data['is_selected'] == 1]
 

@@ -11,11 +11,11 @@ MAX_RESULTS = 5
 device = devices.get_device()
 
 query_projector = None
-rows = None
+docs = None
 
-def load_model_and_rows():
-    global query_projector, rows
-    if query_projector is None or rows is None:
+def load_model_and_docs():
+    global query_projector, docs
+    if query_projector is None or docs is None:
         query_projector = models.query_projector.Model().to(device)
 
         query_state_dict = artifacts.load_artifact('query-projector-weights', 'model')
@@ -23,19 +23,19 @@ def load_model_and_rows():
         query_projector.load_state_dict(query_state_dict)
         query_projector.eval()
 
-        rows = pd.read_csv(constants.RESULTS_PATH)
+        docs = pd.read_csv(constants.DOCS_PATH)
 
-    return query_projector, rows
+    return query_projector, docs
 
 def get_random_query():
-    query_projector, rows = load_model_and_rows()
+    sample_queries = pd.read_csv(constants.SAMPLE_QUERIES_PATH)
 
-    query = rows.sample(1).iloc[0]['query']
+    query = sample_queries.sample(1).iloc[0]['query']
 
     return query
 
 def search(query: str):
-    query_projector, rows = load_model_and_rows()
+    query_projector, docs = docs()
 
     query_embeddings = models.query_embedder.get_embeddings_for_query(query)
 
@@ -53,6 +53,6 @@ def search(query: str):
         n_results=5,
     )
     nearest_doc_refs = nearest_docs['ids'][0]
-    nearest_docs = [rows[rows['doc_ref'] == id].iloc[0].to_dict() for id in nearest_doc_refs]
+    nearest_docs = [docs[docs['doc_ref'] == id].iloc[0].to_dict() for id in nearest_doc_refs]
 
     return nearest_docs

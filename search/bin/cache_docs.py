@@ -26,7 +26,7 @@ def cache_doc_encodings():
 
     print('Loading data...')
 
-    data = pd.read_csv(constants.RESULTS_PATH)
+    data = pd.read_csv(constants.DOCS_PATH)
 
     print('Removing duplicate documents...')
 
